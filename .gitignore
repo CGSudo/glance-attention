@@ -12,3 +12,5 @@ tools/export/__pycache__/
 tools/export/*.log
 out/
 *.ort
+assets/video/stills/
+video/out/
