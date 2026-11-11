@@ -1,0 +1,19 @@
+# Rust engine / CLI
+- Brief 1 baseline Windows x64 release `glance.exe`: 28,551,680 bytes (27.23 MiB).
+- Brief 1 copied `DirectML.dll`: 18,527,776 bytes; combined runtime: 47,079,456 bytes (44.90 MiB), before installer compression.
+- RAM: 44,404,736 bytes peak working set (42.35 MiB), `Get-Process.PeakWorkingSet64`, sampled every 2 ms.
+- RAM workload: release `analyze samples/webpage.png --model fixture --json`; 1024×683; PNG/JSON exports included; fixture only, not production-model RAM.
+- AOIs and scanpath coordinates: 0–100 percentages, matching existing UI. Compare deltas: B minus A; different-size B heatmap resized to A for CC.
+- Fog threshold: ascending pixel probabilities accumulated to 25% mass. Constant-map CC: 1 for identical maps, otherwise 0.
+- Scanpath: approximation (Itti & Koch 1998 IOR), 7 peaks when image permits; center prior + Gaussian suppression + hard sigma exclusion.
+- SUM conditions are salicon/natural/ecommerce/ui at indices 0/1/2/3; content_type accepts natural/ecommerce/ui, defaults natural. Legacy sidecars retain condition.default_index.
+- Video: image sequences at 5 fps; recurrent state retained between frames, reset per sequence. Encoded video uploads return a frames[] instruction.
+- Model catalog URLs currently contain OWNER placeholders; publish assets before network installs can succeed.
+- Gaps: CUDA/macOS/CoreML hardware, real network installs, OS viewer opening untested. Live HTTP smoke rejected by automatic approval review (blocked by policy); authenticated system/analyze/compare/video router tests pass.
+- Build generates root Cargo.lock and target/; manager owns lockfile/ignore policy outside this brief's source scope.
+- Providers try CUDA (opt-in), DirectML (Windows default), CoreML (macOS default), CPU; native features also enabled in debug. Registration/session/execution failures silently fall back; execution failure retries once on CPU and keeps this engine on CPU.
+- doctor reports directml, Intel(R) Graphics, Intel64 Family 6 Model 197 Stepping 2, 2 inference threads; hardware recommendation sum, CPU unisal. config_dir/glance/config.json default_model overrides default analysis.
+- Sessions lazy-load from file, LRU max 2; HTTP/MCP warm installed default before accepting requests, including changed recommendation after CPU fallback.
+- Release UNISAL on product.png (1024x683), median 3 warmed runs, preprocess/inference/postprocess included: DirectML 50.1 ms, CPU 134.7 ms; 2 intra-op threads, same Windows host. CUDA/CoreML unavailable here.
+- Ignored real UNISAL test passes all 3 samples on CPU and DirectML; normalized mass within 1e-5, minimum PyTorch-reference CC 0.999970.
+- SUM DirectML fails at MatMul_8450 inside Loop_8431 on this Intel GPU; CPU retry completes webpage.png --content-type ui, 20,490 ms CLI wall time including failed GPU attempt and PNG/JSON exports.

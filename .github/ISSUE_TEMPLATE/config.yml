@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/CGSudo/glance-attention/discussions
+    about: Ask questions, share workflows, and discuss visual attention research.
+  - name: Documentation & Science
+    url: https://cgsudo.github.io/glance-attention/science.html
+    about: Understand formulas, benchmark metrics, and method boundaries.

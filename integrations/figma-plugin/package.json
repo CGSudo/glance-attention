@@ -1,0 +1,14 @@
+{
+  "name": "glance-figma-plugin",
+  "private": true,
+  "version": "0.1.0",
+  "author": "Glance contributors",
+  "scripts": {
+    "build": "tsc --target es2017 --lib es2017,dom code.ts",
+    "check": "tsc --noEmit --target es2017 --lib es2017,dom code.ts"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "1.100.2",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "IsActive": true,
+  "Name": "Glance attention analysis",
+  "Path": "%LOCALAPPDATA%\\Glance\\glance.exe",
+  "Args": "analyze \"$input\" --open",
+  "OutputExtension": "",
+  "Extensions": "png,jpg,jpeg,bmp,webp",
+  "HiddenWindow": true,
+  "DeleteInputFile": false
+}

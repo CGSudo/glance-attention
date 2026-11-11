@@ -1,0 +1,54 @@
+name: Desktop release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: dmg
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/ui/package-lock.json
+      - name: Rust toolchain
+        run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+      - run: rustup default stable
+      - run: npm ci
+        working-directory: app/ui
+      - run: npm ci
+        working-directory: app
+      - uses: tauri-apps/tauri-action@action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_ENV_TARGET_TRIPLE: ${{ matrix.target }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: Glance ${{ github.ref_name }}
+          releaseBody: Unsigned Windows and macOS installers. Models download on first use.
+          releaseDraft: true
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}

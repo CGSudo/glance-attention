@@ -1,0 +1,230 @@
+[
+  {
+    "id": "unisal",
+    "name": "UNISAL",
+    "tasks": [
+      "image"
+    ],
+    "input": {
+      "w": 384,
+      "h": 288,
+      "layout": "NCHW",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "dtype": "float32",
+      "batch": 1,
+      "color": "RGB",
+      "scale": 0.00392156862745098,
+      "resize": "stretch",
+      "interpolation": "lanczos"
+    },
+    "output": "logit",
+    "output_shape": [
+      1,
+      1,
+      288,
+      384
+    ],
+    "postprocessing": "resize bilinear (align_corners=false) in log space, exp, normalize sum=1",
+    "url": "https://github.com/CGSudo/glance-attention/releases/download/models-v1/unisal.onnx",
+    "sha256": "3b678f9716893d1c51aebe5ff485f5d1890383d3673d524e988abfe417b73b85",
+    "size_mb": 12.796509,
+    "size_bytes": 12796509,
+    "license": "Apache-2.0",
+    "citation": "Droste, Jiao, Noble. Unified Image and Video Saliency Modeling. ECCV 2020. University of Oxford.",
+    "benchmark": {
+      "dataset": "MIT300",
+      "AUC": 0.8772,
+      "CC": 0.7851,
+      "NSS": 2.3689,
+      "source": "https://saliency.tuebingen.ai/results.html",
+      "notes": "Published UNISAL probabilistic submission; MIT1003 adaptation and metric-specific evaluation. Reference only: exported checkpoint is weights_best.pth, not weights_ft_mit1003.pth; these are not ONNX scores."
+    }
+  },
+  {
+    "id": "unisal_video",
+    "name": "UNISAL Video",
+    "tasks": [
+      "video"
+    ],
+    "input": {
+      "w": 384,
+      "h": 224,
+      "layout": "NCHW",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "dtype": "float32",
+      "batch": 1,
+      "color": "RGB",
+      "scale": 0.00392156862745098,
+      "resize": "stretch",
+      "interpolation": "lanczos"
+    },
+    "output": "logit",
+    "output_shape": [
+      1,
+      1,
+      224,
+      384
+    ],
+    "postprocessing": "resize bilinear (align_corners=false) in log space, exp, normalize sum=1",
+    "url": "https://github.com/CGSudo/glance-attention/releases/download/models-v1/unisal_video.onnx",
+    "sha256": "e94290e71173141ba7593fa13857892bd01feb63b6789a3aaa1944d8f60eb9d9",
+    "size_mb": 14.719661,
+    "size_bytes": 14719661,
+    "license": "Apache-2.0",
+    "citation": "Droste, Jiao, Noble. Unified Image and Video Saliency Modeling. ECCV 2020. University of Oxford.",
+    "benchmark": {
+      "dataset": null,
+      "AUC": null,
+      "CC": null,
+      "NSS": null,
+      "source": null
+    },
+    "state": {
+      "input": "hidden",
+      "output": "new_hidden",
+      "shape": [
+        1,
+        256,
+        7,
+        12
+      ],
+      "dtype": "float32",
+      "initialization": "zeros at sequence start; carry new_hidden to next frame"
+    }
+  },
+  {
+    "id": "transalnet",
+    "name": "TranSalNet Dense",
+    "tasks": [
+      "image"
+    ],
+    "input": {
+      "w": 384,
+      "h": 288,
+      "layout": "NCHW",
+      "mean": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "std": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dtype": "float32",
+      "batch": 1,
+      "color": "BGR",
+      "scale": 0.00392156862745098,
+      "resize": "letterbox",
+      "interpolation": "bilinear",
+      "padding_value": 1,
+      "padding": "center; max(1, floor resized short edge); floor left/top offset"
+    },
+    "output": "prob",
+    "output_shape": [
+      1,
+      1,
+      288,
+      384
+    ],
+    "postprocessing": "resize cover with OpenCV INTER_LINEAR, center crop to original size, normalize sum=1; no uint8 conversion",
+    "url": "https://github.com/CGSudo/glance-attention/releases/download/models-v1/transalnet.onnx",
+    "sha256": "73dbc4b8c8b2dff6403a7e69b0ff0f0a1db3cd69c22c8e2048a2d42dbcaed5e9",
+    "size_mb": 307.201926,
+    "size_bytes": 307201926,
+    "license": "MIT",
+    "citation": "Lou, Lin, Marshall, Saupe, Liu. TranSalNet: Towards perceptually relevant visual saliency prediction. Neurocomputing 2022. Cardiff University; Robert Gordon University; University of Konstanz.",
+    "benchmark": {
+      "dataset": "MIT300",
+      "AUC": 0.8734,
+      "CC": 0.807,
+      "NSS": 2.4134,
+      "source": "https://saliency.tuebingen.ai/results.html",
+      "notes": "Published TranSalNet_Dense classical submission after MIT1003 training (paper section 4.5.2). Reference only: exported checkpoint is SALICON-trained; these are not ONNX scores."
+    }
+  },
+  {
+    "id": "sum",
+    "conditions": ["salicon", "natural", "ecommerce", "ui"],
+    "name": "SUM",
+    "tasks": [
+      "image"
+    ],
+    "input": {
+      "w": 256,
+      "h": 256,
+      "layout": "NCHW",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "dtype": "float32",
+      "batch": 1,
+      "color": "RGB",
+      "scale": 0.00392156862745098,
+      "resize": "stretch",
+      "interpolation": "bilinear"
+    },
+    "output": "prob",
+    "output_shape": [
+      1,
+      1,
+      256,
+      256
+    ],
+    "postprocessing": "resize bilinear (align_corners=false), normalize sum=1",
+    "url": "https://github.com/CGSudo/glance-attention/releases/download/models-v1/sum.onnx",
+    "sha256": "a4fc91324edfbacc26421b1bcd7a9d6a8ac67c0dd6e715e5fc062febd9e9ec20",
+    "size_mb": 233.113367,
+    "size_bytes": 233113367,
+    "license": "MIT",
+    "citation": "Hosseini, Kazerouni, Akhavan, Brudno, Taati. SUM: Saliency Unification through Mamba for Visual Attention Modeling. WACV 2025. University of Tehran; University of Toronto; Vector Institute; University Health Network.",
+    "benchmark": {
+      "dataset": null,
+      "AUC": null,
+      "CC": null,
+      "NSS": null,
+      "source": null
+    },
+    "condition": {
+      "name": "condition",
+      "shape": [
+        1,
+        4
+      ],
+      "dtype": "float32",
+      "encoding": "one-hot",
+      "values": {
+        "0": "SALICON natural scenes (mouse)",
+        "1": "natural scenes (eye tracking)",
+        "2": "e-commerce",
+        "3": "UI"
+      }
+    }
+  }
+]

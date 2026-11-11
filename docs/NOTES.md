@@ -1,0 +1,12 @@
+# Publication notes
+- GitHub Pages base is https://cgsudo.github.io/glance-attention/; repository is CGSudo/glance-attention.
+- TODO-verify: repository/Releases URL, installer filenames, minimum OS, signing and full MIT license text; replace README screenshot placeholder.
+- TODO-verify: installed feature availability, ONNX exports/parity, SUM selective-scan compatibility; exclude unsupported SUM from v1.
+- TODO-verify: weight/dependency redistribution rights; EyeFormer/DeepGaze IIE stay user-import only under SPEC policy.
+- TODO-verify: paper/dataset reuse terms and incomplete author, affiliation, venue/year fields marked in CITATIONS.md and citations.html.
+- TODO-verify: supplied benchmark values' exact leaderboard row, dataset and protocol; these are not Glance results.
+- TODO-verify: fog threshold meaning (pixel quantile vs cumulative mass), scanpath/AOI edge behavior and video timing.
+- TODO-verify: ShareX placeholder/--open, Chrome packaging, Figma localhost/HTTPS permissions and MCP client/runtime compatibility.
+- TODO-verify: competitor retention/offline terms, redistributable models, raw accuracy denominators and Feng-GUI pricing; recheck dated prices.
+- Inter uses Google Fonts; self-host with its license if site-wide offline fonts are required.
+- Publish from main / docs only after resolving publication blockers; run node docs/check-links.mjs again.

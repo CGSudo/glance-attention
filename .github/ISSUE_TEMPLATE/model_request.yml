@@ -1,0 +1,74 @@
+name: Saliency Model Request
+description: Request addition or ONNX export tooling for a published visual saliency model
+title: "[Model]: "
+labels: ["model", "research"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Glance only redistributes pre-converted models with explicit permissive open-source licenses.
+        Other models can be imported locally by users via "Bring Your Own ONNX".
+
+  - type: input
+    id: model_name
+    attributes:
+      label: Model Name & Year
+      placeholder: "e.g. DeepGaze IIE (2021) or SUM (2025)"
+    validations:
+      required: true
+
+  - type: input
+    id: paper_citation
+    attributes:
+      label: Paper Title & Conference/Journal
+      placeholder: "e.g. Linardos et al., DeepGaze IIE, ICCV 2021"
+    validations:
+      required: true
+
+  - type: input
+    id: repo_url
+    attributes:
+      label: Official Source Repository URL
+      placeholder: "https://github.com/..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: license
+    attributes:
+      label: Model & Code License
+      description: What open source license governs the weights and code?
+      options:
+        - MIT
+        - Apache-2.0
+        - BSD-3-Clause
+        - CC-BY-4.0
+        - Non-Commercial / Research-Only (Requires User BYO-ONNX Import)
+        - Proprietary / Unknown (Excluded from bundling)
+    validations:
+      required: true
+
+  - type: input
+    id: benchmark
+    attributes:
+      label: Published Benchmark Scores (MIT300 / SALICON / Cat2000)
+      placeholder: "e.g. MIT300: AUC-J=0.88, CC=0.82, NSS=2.45"
+    validations:
+      required: false
+
+  - type: textarea
+    id: onnx_notes
+    attributes:
+      label: ONNX Export Feasibility
+      description: Does the PyTorch implementation use standard ops, or does it require custom CUDA/C++ kernels?
+      placeholder: "e.g. Standard PyTorch Conv2D + Transformer blocks; exports cleanly via torch.onnx.export..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms_check
+    attributes:
+      label: Policy Agreement
+      options:
+        - label: I understand Glance will only ship models with verified redistribution rights.
+          required: true

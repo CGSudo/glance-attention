@@ -1,0 +1,24 @@
+[package]
+name = "glance-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = ["directml", "coreml"]
+cuda = ["ort/cuda"]
+directml = ["ort/directml"]
+coreml = ["ort/coreml"]
+
+[dependencies]
+# Select the platform's prebuilt runtime when native EP features differ by OS.
+ort = { workspace = true, features = ["lax-feature-matching"] }
+image.workspace = true
+ndarray.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+ureq.workspace = true
+base64.workspace = true
+directories.workspace = true
+thiserror.workspace = true

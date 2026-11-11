@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 250" width="100%" height="100%" fill="none" role="img" aria-label="How Attention Prediction Works (4 Steps)">
+  <defs>
+    <style>
+      .font-sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; }
+      .title { font-size: 14px; font-weight: 700; fill: #0F172A; }
+      .desc { font-size: 11px; font-weight: 400; fill: #475569; line-height: 1.4; }
+      .badge-text { font-size: 10px; font-weight: 700; fill: #0F766E; }
+      .card-bg { fill: #FFFFFF; stroke: #E2E8F0; stroke-width: 1.2; }
+      .icon-bg { fill: #F0FDFA; stroke: #CCFBF1; stroke-width: 1; }
+      @media (prefers-color-scheme: dark) {
+        .bg-root { fill: #0B1116; stroke: #1E293B; }
+        .card-bg { fill: #0F172A; stroke: #1E293B; }
+        .icon-bg { fill: #134E4A; stroke: #0F766E; }
+        .title { fill: #F8FAFC; }
+        .desc { fill: #94A3B8; }
+        .badge-text { fill: #2DD4BF; }
+        .badge-bg { fill: #064E3B; stroke: #0F766E; }
+        .wire-card { fill: #1E293B; stroke: #334155; }
+        .wire-line { fill: #475569; }
+        .wire-heat { fill: #2DD4BF; }
+      }
+    </style>
+
+    <radialGradient id="heat-step4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E11D48" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#F59E0B" stop-opacity="0.7"/>
+      <stop offset="80%" stop-color="#0F766E" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0F766E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Root Container Box -->
+  <rect class="bg-root" width="960" height="250" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- ================= STEP 1: EYE SPOTLIGHT ================= -->
+  <g transform="translate(20, 20)">
+    <rect class="card-bg" width="215" height="210" rx="8"/>
+    <!-- Step Badge -->
+    <rect class="badge-bg" x="14" y="14" width="46" height="18" rx="9" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1"/>
+    <text x="37" y="27" class="font-sans badge-text" text-anchor="middle">STEP 1</text>
+    <text x="14" y="54" class="font-sans title">Tiny Sharp Spotlight</text>
+    <text x="14" y="72" class="font-sans desc">Your fovea only sees ~2°</text>
+    <text x="14" y="87" class="font-sans desc">in sharp detail. Everything</text>
+    <text x="14" y="102" class="font-sans desc">else is a blurry cue.</text>
+
+    <!-- Step 1 Illustration: Eye + Spotlight -->
+    <g transform="translate(14, 118)">
+      <rect class="icon-bg" width="187" height="78" rx="6"/>
+      <!-- Eye contour -->
+      <path d="M 24 39 C 32 25 58 25 66 39 C 58 53 32 53 24 39 Z" stroke="#0F766E" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+      <circle cx="45" cy="39" r="6" fill="#0F766E"/>
+      <!-- Vision cone rays -->
+      <path d="M 66 39 L 140 20 L 140 58 Z" fill="#0F766E" opacity="0.12"/>
+      <path d="M 66 39 L 140 20 M 66 39 L 140 58" stroke="#0F766E" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <!-- Sharp target spot -->
+      <circle cx="140" cy="39" r="16" fill="none" stroke="#0F766E" stroke-width="2"/>
+      <circle cx="140" cy="39" r="4" fill="#0F766E"/>
+    </g>
+  </g>
+
+  <!-- ================= STEP 2: JUMPS & PAUSES ================= -->
+  <g transform="translate(255, 20)">
+    <rect class="card-bg" width="215" height="210" rx="8"/>
+    <rect class="badge-bg" x="14" y="14" width="46" height="18" rx="9" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1"/>
+    <text x="37" y="27" class="font-sans badge-text" text-anchor="middle">STEP 2</text>
+    <text x="14" y="54" class="font-sans title">Jumps, Then Pauses</text>
+    <text x="14" y="72" class="font-sans desc">Eyes jump 3–4 times</text>
+    <text x="14" y="87" class="font-sans desc">per second (saccades),</text>
+    <text x="14" y="102" class="font-sans desc">pausing 200–300 ms.</text>
+
+    <!-- Step 2 Illustration: Scanpath jumps -->
+    <g transform="translate(14, 118)">
+      <rect class="icon-bg" width="187" height="78" rx="6"/>
+      <!-- Jumps path -->
+      <path d="M 32 54 Q 60 20 88 42 Q 120 18 152 34" fill="none" stroke="#0F766E" stroke-width="2" stroke-dasharray="3 3"/>
+      <!-- Fixation 1 -->
+      <circle cx="32" cy="54" r="11" fill="#0F766E"/>
+      <text x="32" y="58" class="font-sans" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">1</text>
+      <!-- Fixation 2 -->
+      <circle cx="88" cy="42" r="11" fill="#0F766E"/>
+      <text x="88" y="46" class="font-sans" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+      <!-- Fixation 3 -->
+      <circle cx="152" cy="34" r="11" fill="#0F766E"/>
+      <text x="152" y="38" class="font-sans" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+    </g>
+  </g>
+
+  <!-- ================= STEP 3: WHAT PULLS THE EYE ================= -->
+  <g transform="translate(490, 20)">
+    <rect class="card-bg" width="215" height="210" rx="8"/>
+    <rect class="badge-bg" x="14" y="14" width="46" height="18" rx="9" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1"/>
+    <text x="37" y="27" class="font-sans badge-text" text-anchor="middle">STEP 3</text>
+    <text x="14" y="54" class="font-sans title">What Pulls The Eye</text>
+    <text x="14" y="72" class="font-sans desc">High contrast, big text,</text>
+    <text x="14" y="87" class="font-sans desc">bright colors, and faces</text>
+    <text x="14" y="102" class="font-sans desc">trigger visual pop-out.</text>
+
+    <!-- Step 3 Illustration: Contrast & pop-out -->
+    <g transform="translate(14, 118)">
+      <rect class="icon-bg" width="187" height="78" rx="6"/>
+      <!-- Low contrast elements -->
+      <rect x="22" y="18" width="56" height="6" rx="2" fill="#94A3B8" opacity="0.5"/>
+      <rect x="22" y="30" width="42" height="5" rx="2" fill="#CBD5E1" opacity="0.6"/>
+      <rect x="22" y="42" width="60" height="5" rx="2" fill="#CBD5E1" opacity="0.6"/>
+      <!-- High contrast pop-out button -->
+      <rect x="96" y="22" width="72" height="34" rx="5" fill="#0F766E"/>
+      <rect x="110" y="34" width="44" height="10" rx="2" fill="#FFFFFF"/>
+      <!-- Attention pull rays -->
+      <path d="M 88 16 L 94 22 M 174 16 L 168 22 M 174 62 L 168 56 M 88 62 L 94 56" stroke="#F59E0B" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- ================= STEP 4: CROWD HEATMAP GUESS ================= -->
+  <g transform="translate(725, 20)">
+    <rect class="card-bg" width="215" height="210" rx="8"/>
+    <rect class="badge-bg" x="14" y="14" width="46" height="18" rx="9" fill="#CCFBF1" stroke="#99F6E4" stroke-width="1"/>
+    <text x="37" y="27" class="font-sans badge-text" text-anchor="middle">STEP 4</text>
+    <text x="14" y="54" class="font-sans title">Crowd Heatmap Guess</text>
+    <text x="14" y="72" class="font-sans desc">Glance predicts where</text>
+    <text x="14" y="87" class="font-sans desc">a group would look</text>
+    <text x="14" y="102" class="font-sans desc">in the first ~3 seconds.</text>
+
+    <!-- Step 4 Illustration: Predicted heatmap bloom -->
+    <g transform="translate(14, 118)">
+      <rect class="icon-bg" width="187" height="78" rx="6"/>
+      <!-- Mock layout card -->
+      <rect x="24" y="14" width="139" height="50" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+      <rect x="34" y="24" width="50" height="6" rx="2" fill="#334155"/>
+      <rect x="34" y="36" width="35" height="5" rx="2" fill="#94A3B8"/>
+      <!-- Predicted crowd heatmap -->
+      <circle cx="120" cy="39" r="24" fill="url(#heat-step4)"/>
+      <circle cx="120" cy="39" r="14" fill="none" stroke="#E11D48" stroke-width="1.5" stroke-dasharray="2 2"/>
+      <circle cx="120" cy="39" r="4" fill="#E11D48"/>
+    </g>
+  </g>
+</svg>

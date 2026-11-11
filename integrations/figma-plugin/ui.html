@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; color: #17252c; margin: 16px; }
+  button, input { font: inherit; padding: 8px; margin: 4px 0; }
+  input[type=password] { width: 95%; }
+  #preview { position: relative; }
+  img { display: block; width: 100%; }
+  #overlay { position: absolute; inset: 0; }
+  [hidden] { display: none !important; }
+</style>
+<h1>Glance</h1>
+<p>Select one frame. Analyze locally. Inspect predicted attention.</p>
+<label for="token">Glance token (~/.glance/token)</label>
+<input id="token" type="password" autocomplete="off" placeholder="Paste bearer token">
+<button id="analyze">Analyze selected frame</button>
+<p id="status" role="status">Ready. Start Glance with: glance serve</p>
+<p id="metrics"></p>
+<label><input id="toggle" type="checkbox" checked disabled> Heatmap overlay</label>
+<div id="preview"><img id="original" alt="Selected frame"><img id="overlay" alt="Predicted attention overlay" hidden></div>
+<button id="place" disabled>Place heatmap as layer</button>
+<script>
+const status = document.querySelector("#status");
+const analyze = document.querySelector("#analyze");
+const place = document.querySelector("#place");
+const toggle = document.querySelector("#toggle");
+const overlay = document.querySelector("#overlay");
+let heatmap;
+let previewUrl;
+analyze.onclick = () => {
+  if (!document.querySelector("#token").value.trim()) {
+    status.textContent = "Paste your Glance token, then analyze.";
+    return;
+  }
+  analyze.disabled = true;
+  place.disabled = toggle.disabled = true;
+  heatmap = null;
+  overlay.hidden = true;
+  document.querySelector("#metrics").textContent = "";
+  status.textContent = "1/2: Exporting frame at 2×…";
+  parent.postMessage({ pluginMessage: { type: "analyze" } }, "*");
+};
+toggle.onchange = () => { overlay.hidden = !toggle.checked; };
+place.onclick = () => {
+  place.disabled = analyze.disabled = true;
+  status.textContent = "Placing heatmap…";
+  parent.postMessage({ pluginMessage: { type: "place", bytes: heatmap } }, "*");
+};
+window.onmessage = async (event) => {
+  if (event.source !== parent) return;
+  const message = event.data.pluginMessage;
+  if (!message) return;
+  try {
+    if (message.type === "error") throw new Error(message.message);
+    if (message.type === "placed") {
+      status.textContent = "Placed. Heatmap layer sits above the analyzed frame.";
+      analyze.disabled = place.disabled = false;
+      return;
+    }
+    if (message.type !== "image") return;
+    const png = new Blob([new Uint8Array(message.bytes)], { type: "image/png" });
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(png);
+    document.querySelector("#original").src = previewUrl;
+    status.textContent = "2/2: Analyzing locally…";
+    const form = new FormData();
+    form.append("image", png, "frame.png");
+    let response;
+    try {
+      response = await fetch("http://localhost:7878/v1/analyze", {
+        method: "POST", body: form,
+        headers: { Authorization: `Bearer ${document.querySelector("#token").value.trim()}` },
+        signal: AbortSignal.timeout(120000)
+      });
+    } catch (error) {
+      throw new Error(error.name === "TimeoutError" ? "Analysis timed out. Retry analysis." : "Start Glance, then retry. If running, check localhost/CORS permissions (README).");
+    }
+    if (!response.ok) throw new Error(response.status === 401 || response.status === 403
+      ? "Token rejected. Paste the current Glance token, then retry."
+      : `Glance returned HTTP ${response.status}. Check Glance, then retry.`);
+    const result = await response.json();
+    if (!result.overlay_png_b64 || !result.heatmap_png_b64 || !Number.isFinite(result.metrics?.clarity)) {
+      throw new Error("Invalid Glance response. Check API version, then retry.");
+    }
+    heatmap = Array.from(atob(result.heatmap_png_b64), (char) => char.charCodeAt(0));
+    overlay.src = `data:image/png;base64,${result.overlay_png_b64}`;
+    overlay.hidden = !toggle.checked;
+    const metrics = [`Clarity: ${result.metrics.clarity.toFixed(1)} / 100 (higher = more focused attention)`];
+    if (Number.isFinite(result.metrics.agreement)) metrics.push(`Model agreement: ${result.metrics.agreement.toFixed(3)}`);
+    document.querySelector("#metrics").textContent = metrics.join(" · ");
+    status.textContent = "Complete. Inspect overlay or place heatmap above the frame.";
+    analyze.disabled = place.disabled = toggle.disabled = false;
+  } catch (error) {
+    status.textContent = error.message;
+    analyze.disabled = false;
+    place.disabled = !heatmap;
+  }
+};
+</script>
+</html>

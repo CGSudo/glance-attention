@@ -1,0 +1,1 @@
+{"id":"fixture","name":"Fixture","tasks":["image"],"input":{"w":8,"h":8,"layout":"NCHW","mean":[0,0,0],"std":[1,1,1]},"output":"prob","url":"","sha256":"","size_mb":0,"license":"MIT","citation":"Test fixture: RGB channel mean, 1x1 convolution.","benchmark":{}}

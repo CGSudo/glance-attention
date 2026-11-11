@@ -1,0 +1,14 @@
+models/*.onnx
+target/
+node_modules/
+dist/
+*.log
+app/src-tauri/binaries/
+app/src-tauri/gen/
+app/src-tauri/native/
+tools/export/.venv/
+tools/export/src/
+tools/export/__pycache__/
+tools/export/*.log
+out/
+*.ort

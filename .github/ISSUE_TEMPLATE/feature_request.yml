@@ -1,0 +1,56 @@
+name: Feature Request
+description: Propose an improvement, export format, or workflow integration for Glance
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We prioritize features grounded in verifiable attention research and clean offline engineering.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - Desktop UI & Visualization
+        - CLI & Batch Processing
+        - Metrics & Science (AUC, CC, NSS, AOI)
+        - Local API / MCP Agent Tooling
+        - Integration (ShareX, Figma, Chrome)
+        - Export Formats (PDF, CSV, JSON)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Friction
+      description: What workflow problem or design review limitation does this solve?
+      placeholder: "e.g. When comparing 10 variants in batch mode, there is currently no way to export per-AOI deltas to a single CSV..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Detailed description of the suggested behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scientific_basis
+    attributes:
+      label: Scientific or Technical Context (if applicable)
+      description: Citations, formulas, or standard benchmarks related to this proposal.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workaround or alternative implementations you evaluated.
+    validations:
+      required: false

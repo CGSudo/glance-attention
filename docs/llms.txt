@@ -1,0 +1,16 @@
+# Glance
+> Free, open-source desktop attention prediction, in development. Planned local ONNX inference for Windows and macOS.
+
+Glance estimates early free-viewing attention from images. It does not record eyes or establish comprehension, memory, emotion or conversion. No Glance accuracy benchmark is established. Model licenses differ from application licensing.
+
+## Documentation
+- [Home](https://cgsudo.github.io/glance-attention/index.html): product and current status.
+- [How it works](https://cgsudo.github.io/glance-attention/how-it-works.html): illustrated explanation.
+- [Science](https://cgsudo.github.io/glance-attention/science.html): formulas, supplied benchmark references and limits.
+- [Download](https://cgsudo.github.io/glance-attention/download.html): availability; no release artifact verified yet.
+- [Integrations](https://cgsudo.github.io/glance-attention/integrations.html): planned CLI, localhost API and MCP contracts.
+- [Comparisons](https://cgsudo.github.io/glance-attention/compare/index.html): attributed vendor facts and unknowns.
+- [Citations](https://cgsudo.github.io/glance-attention/citations.html): sources and license boundaries.
+
+## Publication status
+TODO-verify: replace glance.example with confirmed GitHub Pages base URL before publication. Maintained by CGSudo.

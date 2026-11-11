@@ -1,0 +1,100 @@
+name: Bug Report
+description: File a reproducible bug or runtime issue in Glance
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue. Please provide actionable reproduction steps.
+        **Privacy note**: Do not upload proprietary or confidential client images.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: Select your operating system.
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS 14 Sonoma
+        - macOS 13 Ventura
+        - Linux / Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Glance encountered the issue?
+      options:
+        - Desktop App (Tauri UI)
+        - Headless CLI (`glance analyze/compare`)
+        - Local API (`glance serve`)
+        - MCP Server (`glance mcp`)
+        - Integration (ShareX, Figma, Chrome)
+        - Model Export / Parity Tool
+    validations:
+      required: true
+
+  - type: dropdown
+    id: model
+    attributes:
+      label: Active Model
+      description: Which model was active when the issue occurred?
+      options:
+        - SUM (Hosseini et al., WACV 2025)
+        - UNISAL (Droste et al., ECCV 2020)
+        - TranSalNet (Lou et al., Neurocomputing 2022)
+        - Custom User-Imported ONNX
+        - N/A (Failed before model execution)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear and concise explanation of what happened.
+      placeholder: "e.g. When analyzing an image larger than 4096px, the preview fails to render..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to trigger the bug.
+      placeholder: |
+        1. Open Glance
+        2. Drag and drop sample.png
+        3. Draw an AOI rectangle around the button
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted Logs / Terminal Output
+      description: Paste any terminal errors, console warnings, or panic stacktraces.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verification Checks
+      options:
+        - label: I verified that this bug occurs on the latest release or main branch.
+          required: true
+        - label: I confirmed that no sensitive, private, or copyrighted client images are attached.
+          required: true
