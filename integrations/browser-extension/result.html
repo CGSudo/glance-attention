@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glance result</title>
+<link rel="stylesheet" href="style.css">
+<main>
+  <h1>Glance result</h1>
+  <p>Runs in your browser. Images never leave your device.</p>
+  <p id="status" role="status">1/2: Loading screenshot…</p>
+  <p id="clarity"></p>
+  <button id="settings">Connection settings</button>
+  <button id="retry" hidden>Retry analysis</button>
+  <label><input id="overlay" type="checkbox" checked disabled> Heatmap overlay</label>
+  <label><input id="gaze" type="checkbox" checked disabled> Gaze order</label>
+  <label><input id="squint" type="checkbox" disabled> Squint test</label>
+  <details><summary>About the squint test</summary><p>The painter's value study: grayscale + blur shows where brightness contrast pulls the eye. It cannot see faces or text — compare with the model heatmap.</p></details>
+  <p>Gaze order: approximation (Itti &amp; Koch 1998 IOR), unless supplied by a scanpath model.</p>
+  <div id="image">
+    <img id="original" alt="Original captured screenshot">
+    <img id="heatmap" alt="Predicted attention overlay" hidden>
+    <img id="squint-image" alt="Squint test: blurred grayscale values" hidden>
+    <div id="dots" aria-label="Predicted gaze order"></div>
+  </div>
+</main>
+<script type="module" src="result.js"></script>
+</html>

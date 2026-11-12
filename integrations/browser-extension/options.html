@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glance settings</title>
+<link rel="stylesheet" href="style.css">
+<main>
+  <h1>Glance settings</h1>
+  <p>Use UNISAL immediately. Larger models download only when you choose them.</p>
+  <form>
+    <label for="mode">Analysis mode</label>
+    <select id="mode"><option value="browser">In this browser</option><option value="server">Desktop server (fallback)</option></select>
+    <label for="model">Model</label>
+    <select id="model"><option value="unisal">UNISAL (included)</option><option value="sum">SUM (download required)</option><option value="transalnet">TranSalNet (download required)</option></select>
+    <button id="download" type="button">Download full models</button>
+    <details><summary>Desktop connection</summary><p>Run <code>glance serve</code> or enable the desktop background server. Paste the token from your config directory: <code>glance/token</code>.</p>
+    <label for="token">Bearer token (desktop mode only)</label>
+    <input id="token" type="password" autocomplete="off"></details>
+    <button>Save settings</button>
+  </form>
+  <p id="status" role="status"></p>
+  <p>Models stay in this browser profile. Larger models need more memory; use desktop mode if browser inference fails.</p>
+  <p>Browser mode processes screenshots here. Desktop mode sends them only to 127.0.0.1. Tokens never sync.</p>
+</main>
+<script type="module" src="options.js"></script>
+</html>

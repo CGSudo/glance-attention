@@ -1,0 +1,10 @@
+body { font: 16px/1.5 system-ui, sans-serif; margin: 24px; color: #17252c; background: #f7f9fa; }
+main { max-width: 1100px; margin: auto; }
+button, input { font: inherit; padding: 8px; }
+button, label { margin: 8px 12px 8px 0; }
+input[type=password] { display: block; width: min(90%, 480px); }
+#image { position: relative; margin-top: 16px; }
+#original { display: block; width: 100%; }
+#heatmap, #squint-image, #dots { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.dot { position: absolute; transform: translate(-50%, -50%); border: 2px solid white; border-radius: 50%; background: #102a43; color: white; min-width: 26px; text-align: center; font-weight: bold; }
+[hidden] { display: none !important; }

@@ -1,0 +1,6 @@
+# ONNX Runtime's CoreML provider needs compiler-rt (___isPlatformVersionAtLeast) on macOS.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-fapple-link-rtlib"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-fapple-link-rtlib"]
