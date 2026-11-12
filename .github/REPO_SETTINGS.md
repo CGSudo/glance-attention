@@ -52,7 +52,6 @@ eye-tracking, saliency, attention, heatmap, neuromarketing, ux-research, onnx, t
     |---|---|---|---|
     | Windows | `glance-x64-setup.exe` | x86_64 | `[hash]` |
     | macOS (Apple Silicon) | `glance-aarch64.dmg` | arm64 | `[hash]` |
-    | macOS (Intel) | `glance-x64.dmg` | x86_64 | `[hash]` |
     | CLI Binary | `glance-cli-{os}.tar.gz` | Universal | `[hash]` |
   - **Security / Gatekeeper Note**: Instructions for running unsigned open-source binaries safely.
 
