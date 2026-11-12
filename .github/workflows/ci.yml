@@ -41,4 +41,4 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
       - run: node integrations/check.cjs
-      - run: node docs/check-links.mjs
+      # docs/check-links.mjs runs in pages.yml, after build:web generates docs/app/
