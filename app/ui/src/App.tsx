@@ -1,21 +1,45 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Layout, ScreenId } from './components/Layout';
 import { OnboardingModal } from './components/OnboardingModal';
+import { ClientGuideModal } from './components/ClientGuideModal';
 import { Home } from './screens/Home';
 import { Analyze } from './screens/Analyze';
 import { Compare } from './screens/Compare';
 import { Models } from './screens/Models';
 import { Settings } from './screens/Settings';
-import { getTransport, isWeb, pngDataUrl } from './api';
+import { getTransport, isWeb, loadImageFromHandoff } from './api';
 import { ModelInfo, AnalyzeResult, Aoi, ContentType, InstallProgress, SystemInfo } from './api/types';
 import { ColorRampType } from './utils/colorRamps';
+import {
+  StoredRecentImage,
+  getStoredRecentImages,
+  saveRecentImage,
+  deleteRecentImage,
+  clearAllRecentImages,
+} from './utils/recentImages';
+import { createSampleImageBlob, SampleType } from './utils/samples';
+import { isTallImage, getImageDimensions, analyzeFullPage } from './utils/fullPageAnalysis';
 
 const Video = lazy(() => import('./screens/Video').then(module => ({ default: module.Video })));
 const Batch = lazy(() => import('./screens/Batch').then(module => ({ default: module.Batch })));
 const Learn = lazy(() => import('./screens/Learn').then(module => ({ default: module.Learn })));
 
+const VALID_SCREENS: ScreenId[] = [
+  'home',
+  'analyze',
+  'compare',
+  'video',
+  'models',
+  'batch',
+  'learn',
+  'settings',
+];
+
 export const App: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
+  // First load: default to analyze screen where default sample is analysed
+  const initialHash = typeof window !== 'undefined' ? (window.location.hash.replace('#', '') as ScreenId) : 'analyze';
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>(VALID_SCREENS.includes(initialHash) ? initialHash : 'analyze');
+
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [activeModelId, setActiveModelId] = useState<string>('unisal');
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
@@ -27,19 +51,24 @@ export const App: React.FC = () => {
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [colorRamp, setColorRamp] = useState<ColorRampType>('inferno');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
+  const [showHintBar, setShowHintBar] = useState<boolean>(false);
+  const [showClientGuideCard, setShowClientGuideCard] = useState<boolean>(false);
+  const [isClientGuideModalOpen, setIsClientGuideModalOpen] = useState<boolean>(false);
+  const initialSampleLoaded = useRef<boolean>(false);
 
   // Analysis State
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageSrc, setImageSrc] = useState<string>('');
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [webStatus, setWebStatus] = useState('Preparing browser engine…');
   const [aois, setAois] = useState<Aoi[]>([]);
   const analysisRequest = useRef(0);
-  const [recentItems, setRecentItems] = useState<
-    { id: string; name: string; timestamp: string; clarity: number; thumbnail: string }[]
-  >([]);
+
+  // IndexedDB Stored Recent Images
+  const [recentImages, setRecentImages] = useState<StoredRecentImage[]>([]);
 
   const refreshModels = useCallback(async () => {
     try {
@@ -64,35 +93,28 @@ export const App: React.FC = () => {
     if (isWeb && currentScreen === 'settings') getTransport().getSystemInfo().then(setSystemInfo).catch(error => setStartupError(String(error)));
   }, [currentScreen]);
 
-  // Load models on mount
+  // Load models, onboarding status, recent images, and check handoff on mount
   useEffect(() => {
     refreshModels();
 
-    // Check first-run onboarding
-    const completed = localStorage.getItem('glance_onboarding_completed');
-    if (!completed && !window.location.hash) {
-      setIsOnboardingOpen(true);
+    // Check first-run hint bar (replaces blocking modal on first view)
+    const hintDismissed = localStorage.getItem('glance_hint_dismissed');
+    if (!hintDismissed) {
+      setShowHintBar(true);
     }
 
-    // Read initial hash if present
-    const hash = window.location.hash.replace('#', '') as ScreenId;
-    const validScreens: ScreenId[] = [
-      'home',
-      'analyze',
-      'compare',
-      'video',
-      'models',
-      'batch',
-      'learn',
-      'settings',
-    ];
-    if (validScreens.includes(hash)) {
-      setCurrentScreen(hash);
+    const count = parseInt(localStorage.getItem('glance_user_analyses_count') || '0', 10);
+    const clientGuideSeen = localStorage.getItem('glance_client_guide_seen');
+    if (count >= 2 && !clientGuideSeen) {
+      setShowClientGuideCard(true);
     }
+
+    // Load recent images from IndexedDB
+    getStoredRecentImages().then(setRecentImages);
 
     const handleHashChange = () => {
       const h = window.location.hash.replace('#', '') as ScreenId;
-      if (validScreens.includes(h)) {
+      if (VALID_SCREENS.includes(h)) {
         setCurrentScreen(h);
       }
     };
@@ -118,53 +140,146 @@ export const App: React.FC = () => {
     }
   }, [reducedMotion]);
 
-  // Run analysis helper
+  // Run analysis helper (supporting tall image slicing and laser grid scan)
   const executeAnalysis = useCallback(
-    async (file: File, modelId: string, currentAois: Aoi[], currentContentType = contentType) => {
+    async (file: File, modelId: string, currentAois: Aoi[], currentContentType = contentType, isSample = false) => {
       const request = ++analysisRequest.current;
       setIsAnalyzing(true);
       setAnalyzeError(null);
+
+      const isReduced = reducedMotion || (typeof window !== 'undefined' && (
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        document.documentElement.classList.contains('reduced-motion')
+      ));
+
+      if (isSample && !isReduced) {
+        setIsScanning(true);
+      } else {
+        setIsScanning(false);
+      }
+
       try {
+        const scanTimer = (isSample && !isReduced)
+          ? new Promise(resolve => setTimeout(resolve, 1500))
+          : Promise.resolve();
+
         const transport = getTransport();
-        const res = await transport.analyze(file, modelId, currentAois, currentContentType, 'squint');
+
+        // Check if image is tall for full-page mode (height > 2x width)
+        const dims = await getImageDimensions(file).catch(() => ({ width: 800, height: 600 }));
+        let analysisPromise: Promise<AnalyzeResult>;
+        if (isTallImage(dims.width, dims.height)) {
+          analysisPromise = analyzeFullPage(file, modelId, currentAois, currentContentType, transport);
+        } else {
+          analysisPromise = transport.analyze(file, modelId, currentAois, currentContentType, 'squint');
+        }
+
+        const [res] = await Promise.all([analysisPromise, scanTimer]);
         const info = await transport.getSystemInfo();
+
         if (request !== analysisRequest.current) return;
         setResult(res);
         setSystemInfo(info);
 
-        // Update recents
-        setRecentItems((prev) => {
-          const newItem = {
-            id: `recent-${Date.now()}`,
-            name: file.name,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            clarity: res.metrics.clarity,
-            thumbnail: pngDataUrl(res.overlay_png_b64),
-          };
-          const filtered = prev.filter((p) => p.name !== file.name);
-          return [newItem, ...filtered].slice(0, 6);
-        });
+        // Store user upload in IndexedDB (max 12, newest first)
+        if (!isSample) {
+          saveRecentImage(file).then((saved) => {
+            if (saved) {
+              setRecentImages((prev) => [saved, ...prev.filter((p) => p.id !== saved.id)].slice(0, 12));
+            }
+          });
+          try {
+            const nextCount = parseInt(localStorage.getItem('glance_user_analyses_count') || '0', 10) + 1;
+            localStorage.setItem('glance_user_analyses_count', String(nextCount));
+            if (nextCount >= 2 && !localStorage.getItem('glance_client_guide_seen')) {
+              setShowClientGuideCard(true);
+            }
+          } catch {
+            // ignore storage error
+          }
+        }
       } catch (err) {
         if (request === analysisRequest.current) setAnalyzeError(String(err));
       } finally {
-        if (request === analysisRequest.current) setIsAnalyzing(false);
+        if (request === analysisRequest.current) {
+          setIsAnalyzing(false);
+          setIsScanning(false);
+        }
       }
     },
-    [contentType]
+    [contentType, reducedMotion]
   );
 
-  const handleSelectImage = (file: File) => {
+  const handleSelectImage = useCallback((file: File) => {
     setImageFile(file);
     const url = URL.createObjectURL(file);
     setImageSrc(url);
     setCurrentScreen('analyze');
+    window.location.hash = 'analyze';
     setAois([]);
-    executeAnalysis(file, activeModelId, []);
+    executeAnalysis(file, activeModelId, [], contentType, false);
+  }, [activeModelId, contentType, executeAnalysis]);
+
+  // Extension handoff check (Req 7)
+  useEffect(() => {
+    loadImageFromHandoff().then((handoffFile) => {
+      if (handoffFile) {
+        handleSelectImage(handoffFile);
+      }
+    });
+  }, [handleSelectImage]);
+
+  const handleSelectSample = useCallback(
+    async (sampleType: SampleType) => {
+      const file = await createSampleImageBlob(sampleType);
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImageSrc(url);
+      setCurrentScreen('analyze');
+      window.location.hash = 'analyze';
+      const initialAois: Aoi[] = sampleType === 'hero' ? [
+        { id: 'cta-btn', name: 'Primary CTA Button', x: 4.5, y: 51.5, width: 23, height: 9, color: '#14b8a6' },
+        { id: 'hero-headline', name: 'Hero Headline', x: 4.5, y: 24, width: 44, height: 14, color: '#f59e0b' },
+      ] : sampleType === 'product' ? [
+        { id: 'add-cart', name: 'Add to Cart', x: 53.5, y: 63, width: 26.5, height: 10, color: '#14b8a6' },
+        { id: 'product-photo', name: 'Headphones', x: 4.5, y: 19, width: 45, height: 74, color: '#f59e0b' },
+      ] : sampleType === 'mobile' ? [
+        { id: 'workout-btn', name: 'Start Workout', x: 34.5, y: 71, width: 31, height: 10.5, color: '#14b8a6' },
+        { id: 'activity-rings', name: 'Activity Rings', x: 34.5, y: 23, width: 31, height: 29, color: '#f59e0b' },
+      ] : sampleType === 'ad' ? [
+        { id: 'claim-cta', name: 'Claim 30% Off', x: 51, y: 63, width: 28, height: 10, color: '#14b8a6' },
+        { id: 'model-face', name: 'Model Face', x: 7.5, y: 10, width: 34, height: 76, color: '#f59e0b' },
+      ] : [];
+      setAois(initialAois);
+      executeAnalysis(file, activeModelId, initialAois, contentType, true);
+    },
+    [activeModelId, contentType, executeAnalysis]
+  );
+
+  const handleSelectRecent = (item: StoredRecentImage) => {
+    const file = new File([item.blob], item.name, { type: 'image/png' });
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImageSrc(url);
+    setCurrentScreen('analyze');
+    window.location.hash = 'analyze';
+    setAois([]);
+    executeAnalysis(file, activeModelId, [], contentType, false);
+  };
+
+  const handleDeleteRecent = async (id: string) => {
+    await deleteRecentImage(id);
+    setRecentImages((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleClearRecents = async () => {
+    await clearAllRecentImages();
+    setRecentImages([]);
   };
 
   const handleReanalyze = (updatedAois: Aoi[]) => {
     if (imageFile) {
-      executeAnalysis(imageFile, activeModelId, updatedAois);
+      executeAnalysis(imageFile, activeModelId, updatedAois, contentType, false);
     }
   };
 
@@ -172,7 +287,7 @@ export const App: React.FC = () => {
     setActiveModelId(id);
     getTransport().setConfig({ default_model: id }).catch(error => setModelError(String(error)));
     if (imageFile && currentScreen === 'analyze') {
-      executeAnalysis(imageFile, id, aois);
+      executeAnalysis(imageFile, id, aois, contentType, false);
     }
   };
 
@@ -207,56 +322,34 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleOpenRecent = (item: { id: string; name: string; thumbnail: string }) => {
-    setImageSrc(item.thumbnail);
-    setCurrentScreen('analyze');
-    window.location.hash = 'analyze';
-  };
-
   const handleNavigate = (screen: ScreenId) => {
     setCurrentScreen(screen);
     window.location.hash = screen;
   };
 
-  // If navigate to analyze without image, auto-generate sample so analysis is visible
-  useEffect(() => {
-    if (currentScreen === 'analyze' && !imageSrc) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 600;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, 800, 600);
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(0, 0, 800, 50);
-      ctx.fillStyle = '#14b8a6';
-      ctx.fillRect(40, 15, 24, 20);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(80, 140, 480, 32);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(80, 190, 360, 16);
-      ctx.fillStyle = '#0d9488';
-      ctx.fillRect(80, 240, 160, 44);
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(480, 180, 260, 280);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillRect(510, 220, 200, 120);
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImageSrc('');
+    setResult(null);
+    setAois([]);
+  };
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], 'sample-hero.png', { type: 'image/png' });
-          setImageFile(file);
-          setImageSrc(canvas.toDataURL());
-          const initialAois: Aoi[] = [
-            { id: 'cta-btn', name: 'Primary CTA Button', x: 10, y: 40, width: 20, height: 8, color: '#14b8a6' },
-            { id: 'hero-headline', name: 'Hero Headline', x: 10, y: 23, width: 60, height: 6, color: '#f59e0b' },
-          ];
-          setAois(initialAois);
-          executeAnalysis(file, activeModelId, initialAois);
-        }
+  // First load: auto-generate default sample in Analyze so it is already analysed
+  useEffect(() => {
+    if (currentScreen === 'analyze' && !imageSrc && !initialSampleLoaded.current) {
+      initialSampleLoaded.current = true;
+      createSampleImageBlob('hero').then((file) => {
+        setImageFile(file);
+        setImageSrc(URL.createObjectURL(file));
+        const initialAois: Aoi[] = [
+          { id: 'cta-btn', name: 'Primary CTA Button', x: 4.5, y: 51.5, width: 23, height: 9, color: '#14b8a6' },
+          { id: 'hero-headline', name: 'Hero Headline', x: 4.5, y: 24, width: 44, height: 14, color: '#f59e0b' },
+        ];
+        setAois(initialAois);
+        executeAnalysis(file, activeModelId, initialAois, contentType, true);
       });
     }
-  }, [currentScreen, imageSrc, activeModelId, executeAnalysis]);
+  }, [currentScreen, imageSrc, activeModelId, executeAnalysis, contentType]);
 
   return (
     <Layout
@@ -272,7 +365,7 @@ export const App: React.FC = () => {
       contentType={contentType}
       onChangeContentType={value => {
         setContentType(value);
-        if (imageFile && currentScreen === 'analyze') executeAnalysis(imageFile, activeModelId, aois, value);
+        if (imageFile && currentScreen === 'analyze') executeAnalysis(imageFile, activeModelId, aois, value, false);
       }}
     >
       {startupError && <p role="alert" className="px-6 py-3 text-sm text-amber-300">{startupError}. Open Settings to configure your connection.</p>}
@@ -280,9 +373,12 @@ export const App: React.FC = () => {
       {currentScreen === 'home' && (
         <Home
           onSelectImage={handleSelectImage}
+          onSelectSample={handleSelectSample}
           onNavigate={handleNavigate}
-          recentItems={recentItems}
-          onOpenRecent={handleOpenRecent}
+          recentImages={recentImages}
+          onSelectRecent={handleSelectRecent}
+          onDeleteRecent={handleDeleteRecent}
+          onClearRecent={handleClearRecents}
         />
       )}
 
@@ -297,6 +393,30 @@ export const App: React.FC = () => {
           aois={aois}
           onUpdateAois={setAois}
           onReanalyze={handleReanalyze}
+          models={models}
+          activeModelId={activeModelId}
+          onSelectModel={handleSelectModel}
+          onSelectImage={handleSelectImage}
+          onSelectSample={handleSelectSample}
+          recentImages={recentImages}
+          onSelectRecent={handleSelectRecent}
+          onDeleteRecent={handleDeleteRecent}
+          onClearRecent={handleClearRecents}
+          isScanning={isScanning}
+          reducedMotion={reducedMotion}
+          onRemoveImage={handleRemoveImage}
+          onNavigate={handleNavigate}
+          showHintBar={showHintBar}
+          onDismissHint={() => {
+            try { localStorage.setItem('glance_hint_dismissed', 'true'); } catch (_err) { void _err; }
+            setShowHintBar(false);
+          }}
+          showClientGuideCard={showClientGuideCard}
+          onOpenClientGuide={() => setIsClientGuideModalOpen(true)}
+          onDismissClientGuideCard={() => {
+            try { localStorage.setItem('glance_client_guide_seen', 'true'); } catch (_err) { void _err; }
+            setShowClientGuideCard(false);
+          }}
         />
       )}
 
@@ -338,6 +458,9 @@ export const App: React.FC = () => {
 
       {/* 3-step skippable onboarding modal */}
       <OnboardingModal open={isOnboardingOpen} onOpenChange={setIsOnboardingOpen} />
+
+      {/* 1-minute client guide modal */}
+      <ClientGuideModal open={isClientGuideModalOpen} onOpenChange={setIsClientGuideModalOpen} />
     </Layout>
   );
 };

@@ -52,3 +52,77 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
+
+@keyframes laser-sweep-keyframes {
+  0% {
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0%, 0);
+  }
+}
+
+.laser-sweep-carrier {
+  will-change: transform;
+  animation: laser-sweep-keyframes 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes result-fade-keyframes {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-result-fade {
+  animation: result-fade-keyframes 0.4s ease-out forwards;
+}
+
+@keyframes heatmap-fade-keyframes {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+.animate-heatmap-fade {
+  animation: heatmap-fade-keyframes 0.4s ease-out forwards;
+}
+
+@keyframes gaze-pop-keyframes {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-gaze-pop {
+  animation: gaze-pop-keyframes 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes line-reveal-keyframes {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 60;
+  }
+  to {
+    opacity: 0.85;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-line-reveal {
+  animation: line-reveal-keyframes 0.3s ease-out both;
+}

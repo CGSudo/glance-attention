@@ -76,6 +76,62 @@ export const Models: React.FC<ModelsProps> = ({
             installProgress={installing[model.id]}
           />
         ))}
+
+        {isWeb && [
+          {
+            id: 'transalnet',
+            name: 'TranSalNet Dense',
+            size: '293 MB',
+            license: 'MIT',
+            strength: 'Sees the whole layout. Better on busy pages where context matters.',
+            citation: 'Lou et al., Neurocomputing 2022',
+          },
+          {
+            id: 'sum',
+            name: 'SUM',
+            size: '222 MB',
+            license: 'MIT',
+            strength: 'Tuned per content type: web pages, ads, e-commerce, photos.',
+            citation: 'Hosseini et al., WACV 2025',
+          },
+        ].filter(dm => !models.some(m => m.id === dm.id)).map((dm) => (
+          <div
+            key={dm.id}
+            className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-neutral-100 text-sm">{dm.name}</h3>
+                  <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
+                    {dm.license}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-200 font-medium mt-1">{dm.strength}</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">{dm.citation}</p>
+              </div>
+              <a
+                href="https://cgsudo.github.io/glance-attention/download.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1 text-xs font-medium transition-colors"
+              >
+                Desktop App
+              </a>
+            </div>
+            <div className="pt-2 border-t border-neutral-800/60 flex items-center justify-between text-xs text-neutral-400">
+              <span>Desktop app only ({dm.size})</span>
+              <a
+                href="https://cgsudo.github.io/glance-attention/download.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-teal-400 hover:text-teal-300 underline font-medium"
+              >
+                Download desktop app
+              </a>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Human Benchmark Reference Info Box */}
@@ -87,7 +143,7 @@ export const Models: React.FC<ModelsProps> = ({
         <p className="leading-relaxed">
           The human ceiling represents the consistency between split halves of real human eye-tracking subject pools.
           On MIT300, human consistency reaches an AUC of <strong>0.934</strong> and Correlation Coefficient (CC) of <strong>0.983</strong>.
-          Glance models operate within 88-94% of this physical human ceiling without requiring cameras or gaze tracking hardware.
+          Glance models get close to this physical human ceiling without requiring cameras or gaze tracking hardware.
         </p>
       </div>
     </div>

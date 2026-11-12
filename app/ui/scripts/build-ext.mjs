@@ -1,5 +1,5 @@
 import { build } from 'vite';
-import { readFile, writeFile, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, copyFile, cp } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { copyRuntime, copyModel } from './web-assets.mjs';
@@ -13,14 +13,16 @@ for (const browser of ['chrome', 'firefox']) {
     resolve: { conditions: ['onnxruntime-web-use-extern-wasm'] },
     worker: { format: 'es' },
     build: { outDir: destination, emptyOutDir: true, rollupOptions: {
-      input: { result: `${root}/result.html`, options: `${root}/options.html`, background: `${root}/background.js` },
+      input: { background: `${root}/background.js` },
       output: { entryFileNames: chunk => chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js' },
     } },
   });
+  await build({ mode: 'web', base: './', build: { outDir: destination, emptyOutDir: false } });
   const output = structuredClone(manifest);
   if (browser === 'firefox') output.background = { scripts: ['background.js'] };
   else delete output.browser_specific_settings;
   await writeFile(`${destination}/manifest.json`, JSON.stringify(output, null, 2));
+  await cp(`${root}/icons`, `${destination}/icons`, { recursive: true });
   await copyRuntime(destination);
   await copyModel('unisal', `${destination}/models`);
   await copyFile('../../docs/app/models/NOTICE', `${destination}/models/NOTICE`);

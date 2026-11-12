@@ -6,6 +6,7 @@ import { WebTransport } from '@glance/web';
 
 export * from './types';
 export * from './transport';
+export * from './handoff';
 export { HttpTransport } from './http';
 export { MockTransport } from './mock';
 export { TauriTransport } from './tauri';

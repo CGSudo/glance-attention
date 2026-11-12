@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glance capture</title>
+<style>
+  body { margin: 24px; font: 16px/1.5 system-ui, sans-serif; color: #17202a; background: #fff; }
+  section { display: none; }
+  section:target { display: block; }
+  h1 { font-size: 20px; }
+</style>
+<section id="cropped">
+  <h1>Only the top of this page was saved</h1>
+  <p>The full capture exceeded the storage limit, even after resizing.</p>
+  <p>Close this message to view the captured area in Glance.</p>
+</section>
+<section id="storage-error">
+  <h1>Capture could not be saved</h1>
+  <p>Extension session storage is full or unavailable.</p>
+  <p>Close this message. Try capturing a smaller page.</p>
+</section>
+</html>

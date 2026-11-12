@@ -12,6 +12,12 @@ interface AccuracyCardProps {
 const HUMAN_CEILING_AUC = 0.934;
 const HUMAN_CEILING_CC = 0.983;
 
+const MODEL_STRENGTHS: Record<string, string> = {
+  unisal: 'Fast and light. Good first check for any image.',
+  transalnet: 'Sees the whole layout. Better on busy pages where context matters.',
+  sum: 'Tuned per content type: web pages, ads, e-commerce, photos.',
+};
+
 export const AccuracyCard: React.FC<AccuracyCardProps> = ({
   model,
   isActive,
@@ -21,6 +27,7 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
 }) => {
   const auc = model.benchmark?.AUC ?? null;
   const cc = model.benchmark?.CC ?? null;
+  const strength = MODEL_STRENGTHS[model.id];
 
   return (
     <div
@@ -49,7 +56,12 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
               {model.license}
             </span>
           </div>
-          <p className="text-xs text-neutral-400 mt-1 line-clamp-2">
+          {strength && (
+            <p className="text-xs text-neutral-200 font-medium mt-1">
+              {strength}
+            </p>
+          )}
+          <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">
             {model.citation || 'Scientific attention prediction model'}
           </p>
         </div>

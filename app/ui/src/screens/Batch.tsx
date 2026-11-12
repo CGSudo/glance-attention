@@ -236,7 +236,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-1.5 text-xs font-medium transition-colors border border-neutral-700 flex items-center gap-1.5"
+            className="min-h-[44px] rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3.5 py-2 text-xs font-medium transition-colors border border-neutral-700 flex items-center gap-1.5"
           >
             <Upload className="h-3.5 w-3.5" />
             <span>Select Files</span>
@@ -246,7 +246,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
             type="button"
             disabled={items.length === 0 || isProcessing}
             onClick={runBatchProcessing}
-            className="rounded-md bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white px-3.5 py-1.5 text-xs font-semibold transition-colors"
+            className="min-h-[44px] rounded-md bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white px-4 py-2 text-xs font-semibold transition-colors"
           >
             {isProcessing ? 'Processing Batch...' : 'Run All'}
           </button>
@@ -297,7 +297,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
                   {item.status === 'processing' && (
                     <span className="inline-flex items-center gap-1 text-teal-400 text-[11px]">
                       <div className="h-3 w-3 animate-spin rounded-full border border-teal-400 border-t-transparent" />
-                      <span>Inferring...</span>
+                      <span>Scanning...</span>
                     </span>
                   )}
                   {item.status === 'pending' && (
@@ -329,7 +329,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex items-center gap-2 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3.5 py-2 text-xs font-medium border border-neutral-700 transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3.5 py-2 text-xs font-medium border border-neutral-700 transition-colors"
           >
             <Download className="h-3.5 w-3.5 text-teal-400" />
             <span>Export to CSV</span>
@@ -338,7 +338,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
           <button
             type="button"
             onClick={exportPdfReport}
-            className="inline-flex items-center gap-2 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3.5 py-2 text-xs font-medium border border-neutral-700 transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-2 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3.5 py-2 text-xs font-medium border border-neutral-700 transition-colors"
           >
             <FileText className="h-3.5 w-3.5 text-teal-400" />
             <span>Export Summary PDF</span>

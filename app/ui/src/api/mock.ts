@@ -340,6 +340,7 @@ function renderOutputs(
   gridCtx.putImageData(gridImgData, 0, 0);
 
   // Smooth upsample onto render canvas
+  ctx.clearRect(0, 0, renderW, renderH);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(gridCanvas, 0, 0, renderW, renderH);

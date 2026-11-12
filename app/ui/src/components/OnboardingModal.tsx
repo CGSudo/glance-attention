@@ -32,7 +32,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenCh
       highlights: [
         'Heatmap: Continuous probability of fixation',
         'Gaze Order: First 7 fixations with Inhibition-of-Return (IOR)',
-        'Fog: Highlights what gets ignored by 75% of viewers',
+        'Fog: Highlights what gets ignored by viewers',
         'AOI Rectangles: Measure exact percentage of visual attention share',
       ],
     },

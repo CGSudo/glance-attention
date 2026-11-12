@@ -107,16 +107,16 @@ export const Video: React.FC = () => {
             <VideoIcon className="h-3.5 w-3.5" />
             <span>Video Attention Modeling (5 FPS UNISAL)</span>
           </div>
-          <h1 className="text-xl font-bold text-neutral-100">Video Saliency Sequence</h1>
+          <h1 className="text-xl font-bold text-neutral-100">Video Attention Over Time</h1>
           <p className="text-xs text-neutral-400">
-            Samples frames at 5 fps to trace dynamic gaze shifts and measure continuous AOI share over time.
+            Samples frames at 5 fps to trace look order and measure attention in areas you marked over time.
           </p>
         </div>
 
         <button
           type="button"
           onClick={loadSyntheticSample}
-          className="rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-1.5 text-xs font-medium transition-colors"
+          className="min-h-[44px] rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-2 text-xs font-medium transition-colors"
         >
           Load Sample Video Sequence
         </button>
@@ -195,7 +195,8 @@ export const Video: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white hover:bg-teal-500 transition-colors"
+                aria-label={isPlaying ? 'Pause video playback' : 'Play video playback'}
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-teal-600 text-white hover:bg-teal-500 transition-colors"
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
               </button>
@@ -206,11 +207,12 @@ export const Video: React.FC = () => {
                 min={0}
                 max={videoResult.frames.length - 1}
                 value={currentFrameIdx}
+                aria-label="Video frame timeline scrubber"
                 onChange={(e) => {
                   setCurrentFrameIdx(Number(e.target.value));
                   setIsPlaying(false);
                 }}
-                className="flex-1 accent-teal-500 h-1.5 bg-neutral-800 rounded-lg cursor-pointer"
+                className="flex-1 accent-teal-500 h-2 bg-neutral-800 rounded-lg cursor-pointer"
               />
 
               <span className="font-mono text-xs text-neutral-300 min-w-16 text-right">
@@ -228,7 +230,7 @@ export const Video: React.FC = () => {
             <div className="flex items-center gap-2">
               <Percent className="h-4 w-4 text-teal-400" />
               <h3 className="font-semibold text-sm text-neutral-100">
-                AOI Attention Share Over Time (Line Chart)
+                Attention on Areas You Marked Over Time
               </h3>
             </div>
             <div className="flex items-center gap-4 text-xs">

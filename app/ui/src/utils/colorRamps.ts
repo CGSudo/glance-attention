@@ -56,8 +56,8 @@ export function buildColorLookupTable(ramp: ColorRampType): Uint8ClampedArray {
     lut[i * 4] = r;
     lut[i * 4 + 1] = g;
     lut[i * 4 + 2] = b;
-    // Transparent at low saliency threshold to keep background visible
-    lut[i * 4 + 3] = i < 15 ? Math.round((i / 15) * 120) : Math.min(220, 120 + Math.round(t * 100));
+    // Low-attention areas must be transparent (alpha ramps with value)
+    lut[i * 4 + 3] = Math.round(t * 255);
   }
   return lut;
 }

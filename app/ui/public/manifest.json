@@ -1,0 +1,16 @@
+{
+  "name": "Glance",
+  "short_name": "Glance",
+  "description": "Visual Attention Prediction",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

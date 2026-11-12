@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, GitCompare, Flame, CloudFog, Percent } from 'lucide-react';
+import { GitCompare, Flame, CloudFog, Percent, RefreshCw } from 'lucide-react';
 import { Aoi, CompareResult, ContentType } from '../api/types';
 import { getTransport, pngDataUrl } from '../api';
 import { MetricsInfoPopover } from '../components/MetricsInfoPopover';
+import { DesignUploader } from '../components/DesignUploader';
+import {
+  StoredRecentImage,
+  getStoredRecentImages,
+  saveRecentImage,
+  deleteRecentImage,
+  clearAllRecentImages,
+} from '../utils/recentImages';
+import { createSampleImageBlob, SampleType } from '../utils/samples';
 
 interface CompareProps {
   activeModelId: string;
@@ -18,79 +27,114 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Replace modes for Variant A & B
+  const [isReplacingA, setIsReplacingA] = useState(false);
+  const [isReplacingB, setIsReplacingB] = useState(false);
+
+  // Recents state
+  const [recentImages, setRecentImages] = useState<StoredRecentImage[]>([]);
+
   // Layer toggle
   const [activeLayer, setActiveLayer] = useState<'heatmap' | 'fog' | 'original'>('heatmap');
 
-  const runComparison = useCallback(async (fA: File, fB: File) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const sampleAois: Aoi[] = [
-        { id: 'cta-primary', name: 'Primary CTA', x: 20, y: 35, width: 25, height: 15, color: '#14b8a6' },
-      ];
-      const transport = getTransport();
-      const res = await transport.compare(fA, fB, activeModelId, sampleAois, contentType);
-      setResult(res);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeModelId, contentType]);
+  useEffect(() => {
+    getStoredRecentImages().then(setRecentImages);
+  }, []);
 
-  const handleSelectA = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const f = e.target.files[0];
-      setFileA(f);
-      setSrcA(URL.createObjectURL(f));
-      if (fileB) runComparison(f, fileB);
-    }
+  const runComparison = useCallback(
+    async (fA: File, fB: File) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const sampleAois: Aoi[] = [
+          { id: 'cta-primary', name: 'Primary CTA', x: 20, y: 35, width: 25, height: 15, color: '#14b8a6' },
+        ];
+        const transport = getTransport();
+        const res = await transport.compare(fA, fB, activeModelId, sampleAois, contentType);
+        setResult(res);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [activeModelId, contentType]
+  );
+
+  const handleSelectA = (file: File) => {
+    setFileA(file);
+    setSrcA(URL.createObjectURL(file));
+    setIsReplacingA(false);
+    saveRecentImage(file).then((saved) => {
+      if (saved) setRecentImages((prev) => [saved, ...prev.filter((p) => p.id !== saved.id)].slice(0, 12));
+    });
+    if (fileB) runComparison(file, fileB);
   };
 
-  const handleSelectB = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const f = e.target.files[0];
-      setFileB(f);
-      setSrcB(URL.createObjectURL(f));
-      if (fileA) runComparison(fileA, f);
-    }
+  const handleSelectB = (file: File) => {
+    setFileB(file);
+    setSrcB(URL.createObjectURL(file));
+    setIsReplacingB(false);
+    saveRecentImage(file).then((saved) => {
+      if (saved) setRecentImages((prev) => [saved, ...prev.filter((p) => p.id !== saved.id)].slice(0, 12));
+    });
+    if (fileA) runComparison(fileA, file);
+  };
+
+  const handleSampleA = async (type: SampleType) => {
+    const f = await createSampleImageBlob(type);
+    setFileA(f);
+    setSrcA(URL.createObjectURL(f));
+    setIsReplacingA(false);
+    if (fileB) runComparison(f, fileB);
+  };
+
+  const handleSampleB = async (type: SampleType) => {
+    const f = await createSampleImageBlob(type);
+    setFileB(f);
+    setSrcB(URL.createObjectURL(f));
+    setIsReplacingB(false);
+    if (fileA) runComparison(fileA, f);
+  };
+
+  const handleSelectRecentA = (item: StoredRecentImage) => {
+    const f = new File([item.blob], item.name, { type: 'image/png' });
+    setFileA(f);
+    setSrcA(URL.createObjectURL(f));
+    setIsReplacingA(false);
+    if (fileB) runComparison(f, fileB);
+  };
+
+  const handleSelectRecentB = (item: StoredRecentImage) => {
+    const f = new File([item.blob], item.name, { type: 'image/png' });
+    setFileB(f);
+    setSrcB(URL.createObjectURL(f));
+    setIsReplacingB(false);
+    if (fileA) runComparison(fileA, f);
+  };
+
+  const handleDeleteRecent = async (id: string) => {
+    await deleteRecentImage(id);
+    setRecentImages((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleClearRecents = async () => {
+    await clearAllRecentImages();
+    setRecentImages([]);
   };
 
   const loadPresetComparison = useCallback(async () => {
-    // Generate two sample canvases with different button placements
-    const createPreset = (ctaX: number, ctaColor: string, titleText: string): Promise<File> => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, 640, 480);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(60, 80, 360, 28);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(60, 130, 240, 14);
-      // CTA Button
-      ctx.fillStyle = ctaColor;
-      ctx.fillRect(ctaX, 180, 160, 44);
-      // Hero image box
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(360, 160, 220, 220);
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(new File([blob!], `${titleText}.png`, { type: 'image/png' }));
-        });
-      });
-    };
-
     const [presetA, presetB] = await Promise.all([
-      createPreset(60, '#0d9488', 'variant-a'),
-      createPreset(240, '#f97316', 'variant-b'),
+      createSampleImageBlob('hero'),
+      createSampleImageBlob('product'),
     ]);
 
     setFileA(presetA);
     setFileB(presetB);
     setSrcA(URL.createObjectURL(presetA));
     setSrcB(URL.createObjectURL(presetB));
+    setIsReplacingA(false);
+    setIsReplacingB(false);
     await runComparison(presetA, presetB);
   }, [runComparison]);
 
@@ -127,26 +171,32 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
           {/* Layer switcher */}
           <div className="flex items-center rounded-md bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
             <button
+              type="button"
               onClick={() => setActiveLayer('heatmap')}
-              className={`flex items-center gap-1 rounded px-2 py-1 ${
+              aria-label="Show Heatmap"
+              className={`flex items-center gap-1 rounded px-2.5 py-1 min-h-[44px] transition-colors ${
                 activeLayer === 'heatmap' ? 'bg-teal-950 text-teal-300 font-medium' : 'text-neutral-400'
               }`}
             >
-              <Flame className="h-3 w-3" />
+              <Flame className="h-3.5 w-3.5" />
               <span>Heatmap</span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveLayer('fog')}
-              className={`flex items-center gap-1 rounded px-2 py-1 ${
+              aria-label="Hide low attention"
+              className={`flex items-center gap-1 rounded px-2.5 py-1 min-h-[44px] transition-colors ${
                 activeLayer === 'fog' ? 'bg-teal-950 text-teal-300 font-medium' : 'text-neutral-400'
               }`}
             >
-              <CloudFog className="h-3 w-3" />
-              <span>Fog</span>
+              <CloudFog className="h-3.5 w-3.5" />
+              <span>Hide low attention</span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveLayer('original')}
-              className={`rounded px-2 py-1 ${
+              aria-label="Show Original"
+              className={`rounded px-2.5 py-1 min-h-[44px] transition-colors ${
                 activeLayer === 'original' ? 'bg-teal-950 text-teal-300 font-medium' : 'text-neutral-400'
               }`}
             >
@@ -171,36 +221,81 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
               <span className="rounded bg-teal-500/10 border border-teal-500/30 px-2 py-0.5 text-xs font-bold text-teal-300">
                 Variant A
               </span>
-              <span className="text-xs text-neutral-400">{fileA?.name || 'No file selected'}</span>
-            </div>
-            {result && (
-              <span className="font-mono text-xs text-teal-400 font-semibold">
-                Clarity: {result.a.metrics.clarity.toFixed(1)}
+              <span className="text-xs text-neutral-400 truncate max-w-40">
+                {fileA?.name || 'No file selected'}
               </span>
-            )}
+            </div>
+            <div className="flex items-center gap-2">
+              {result && (
+                <span className="font-mono text-xs text-teal-400 font-semibold mr-1">
+                  Clarity: {result.a.metrics.clarity.toFixed(1)}
+                </span>
+              )}
+              {srcA && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSrcA('');
+                      setFileA(null);
+                      setResult(null);
+                      setIsReplacingA(false);
+                    }}
+                    aria-label="Remove Variant A image"
+                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-red-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
+                  >
+                    <span className="font-bold text-xs leading-none">✕</span>
+                    <span>Remove</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsReplacingA(!isReplacingA)}
+                    aria-label="New image for Variant A"
+                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-teal-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>{isReplacingA ? 'Cancel' : 'New image'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="relative aspect-4/3 w-full rounded-lg border border-neutral-800 bg-neutral-950 overflow-hidden flex items-center justify-center">
-            {srcA ? (
+          {!srcA || isReplacingA ? (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-950/70 p-3">
+              <DesignUploader
+                compact
+                label="Select Variant A"
+                sublabel="Drop, browse, paste, or select recent/sample"
+                onSelectImage={handleSelectA}
+                onSelectSample={handleSampleA}
+                recentImages={recentImages}
+                onSelectRecent={handleSelectRecentA}
+                onDeleteRecent={handleDeleteRecent}
+                onClearRecent={handleClearRecents}
+              />
+            </div>
+          ) : (
+            <div className="relative aspect-4/3 w-full rounded-lg border border-neutral-800 bg-neutral-950 overflow-hidden flex items-center justify-center">
               <img
-                src={
-                  activeLayer === 'heatmap'
-                    ? (result ? pngDataUrl(result.a.overlay_png_b64) : srcA)
-                    : activeLayer === 'fog'
-                    ? (result ? pngDataUrl(result.a.fog_png_b64) : srcA)
-                    : srcA
-                }
+                src={activeLayer === 'fog' && result ? pngDataUrl(result.a.fog_png_b64) : srcA}
                 alt="Variant A"
                 className="h-full w-full object-contain"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
               />
-            ) : (
-              <label className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:text-teal-400">
-                <Upload className="h-8 w-8 text-neutral-600 mb-2" />
-                <span className="text-xs font-semibold text-neutral-300">Upload Variant A</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleSelectA} />
-              </label>
-            )}
-          </div>
+              {result && activeLayer === 'heatmap' && (
+                <img
+                  src={pngDataUrl(result.a.heatmap_png_b64)}
+                  alt="Variant A Heatmap"
+                  style={{ opacity: 0.7 }}
+                  className="absolute inset-0 h-full w-full object-contain pointer-events-none"
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Variant B */}
@@ -210,36 +305,81 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
               <span className="rounded bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-xs font-bold text-amber-300">
                 Variant B
               </span>
-              <span className="text-xs text-neutral-400">{fileB?.name || 'No file selected'}</span>
-            </div>
-            {result && (
-              <span className="font-mono text-xs text-amber-400 font-semibold">
-                Clarity: {result.b.metrics.clarity.toFixed(1)}
+              <span className="text-xs text-neutral-400 truncate max-w-40">
+                {fileB?.name || 'No file selected'}
               </span>
-            )}
+            </div>
+            <div className="flex items-center gap-2">
+              {result && (
+                <span className="font-mono text-xs text-amber-400 font-semibold mr-1">
+                  Clarity: {result.b.metrics.clarity.toFixed(1)}
+                </span>
+              )}
+              {srcB && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSrcB('');
+                      setFileB(null);
+                      setResult(null);
+                      setIsReplacingB(false);
+                    }}
+                    aria-label="Remove Variant B image"
+                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-red-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
+                  >
+                    <span className="font-bold text-xs leading-none">✕</span>
+                    <span>Remove</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsReplacingB(!isReplacingB)}
+                    aria-label="New image for Variant B"
+                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-amber-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>{isReplacingB ? 'Cancel' : 'New image'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="relative aspect-4/3 w-full rounded-lg border border-neutral-800 bg-neutral-950 overflow-hidden flex items-center justify-center">
-            {srcB ? (
+          {!srcB || isReplacingB ? (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-950/70 p-3">
+              <DesignUploader
+                compact
+                label="Select Variant B"
+                sublabel="Drop, browse, paste, or select recent/sample"
+                onSelectImage={handleSelectB}
+                onSelectSample={handleSampleB}
+                recentImages={recentImages}
+                onSelectRecent={handleSelectRecentB}
+                onDeleteRecent={handleDeleteRecent}
+                onClearRecent={handleClearRecents}
+              />
+            </div>
+          ) : (
+            <div className="relative aspect-4/3 w-full rounded-lg border border-neutral-800 bg-neutral-950 overflow-hidden flex items-center justify-center">
               <img
-                src={
-                  activeLayer === 'heatmap'
-                    ? (result ? pngDataUrl(result.b.overlay_png_b64) : srcB)
-                    : activeLayer === 'fog'
-                    ? (result ? pngDataUrl(result.b.fog_png_b64) : srcB)
-                    : srcB
-                }
+                src={activeLayer === 'fog' && result ? pngDataUrl(result.b.fog_png_b64) : srcB}
                 alt="Variant B"
                 className="h-full w-full object-contain"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
               />
-            ) : (
-              <label className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:text-amber-400">
-                <Upload className="h-8 w-8 text-neutral-600 mb-2" />
-                <span className="text-xs font-semibold text-neutral-300">Upload Variant B</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleSelectB} />
-              </label>
-            )}
-          </div>
+              {result && activeLayer === 'heatmap' && (
+                <img
+                  src={pngDataUrl(result.b.heatmap_png_b64)}
+                  alt="Variant B Heatmap"
+                  style={{ opacity: 0.7 }}
+                  className="absolute inset-0 h-full w-full object-contain pointer-events-none"
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -317,7 +457,7 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
               </div>
               <div className="text-xl font-bold font-mono text-neutral-200">
                 {result.delta.aoi_share[0]?.delta !== undefined
-                  ? `${result.delta.aoi_share[0].delta >= 0 ? '+' : ''}${result.delta.aoi_share[0].delta}%`
+                  ? `${result.delta.aoi_share[0].delta >= 0 ? '+' : ''}${result.delta.aoi_share[0].delta.toFixed(1)}%`
                   : 'N/A'}
               </div>
               <p className="text-[10px] text-neutral-400">

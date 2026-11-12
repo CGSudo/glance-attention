@@ -30,6 +30,21 @@ Looking for a free, open-source alternative to Attention Insight, Neurons Predic
 
 ---
 
+### Backed by peer-reviewed research
+
+Glance models are built on published scientific literature and validated against standard benchmarks. Predictions estimate where human viewers tend to look during early visual viewing (~3 seconds); they are statistical estimates, not guarantees of individual behavior or conversion.
+
+| Model / Benchmark | Paper Title | Venue / Year | Paper Link |
+|---|---|---|---|
+| **UNISAL** | Unified Image and Video Saliency Modeling | ECCV 2020 | [arXiv:2003.05477](https://arxiv.org/abs/2003.05477) |
+| **TranSalNet** | TranSalNet: Towards perceptually relevant visual saliency prediction | Neurocomputing 2022 | [DOI:10.1016/j.neucom.2022.04.080](https://doi.org/10.1016/j.neucom.2022.04.080) |
+| **SUM** | SUM: Saliency Unification through Mamba for Visual Attention Modeling | WACV 2025 | [arXiv:2406.17815](https://arxiv.org/abs/2406.17815) |
+| **MIT300 Benchmark** | MIT/Tübingen Saliency Benchmark | Benchmark Leaderboard | [saliency.tuebingen.ai](https://saliency.tuebingen.ai/) |
+
+See [CITATIONS.md](CITATIONS.md) for full citations, licenses, and bibtex.
+
+---
+
 ### What Glance does
 
 - **100% Local &amp; Private**: Runs installed ONNX models directly on your CPU/GPU via Tauri 2 and Rust. Your images never leave your machine—no accounts, no cloud dependencies, zero telemetry.

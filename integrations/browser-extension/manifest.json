@@ -3,18 +3,30 @@
   "name": "Glance",
   "version": "0.1.0",
   "author": "Glance contributors",
-  "description": "Private attention heatmaps in your browser. Optional local desktop server mode.",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["http://127.0.0.1:7878/*", "https://github.com/CGSudo/glance-attention/*", "https://release-assets.githubusercontent.com/*", "https://cgsudo.github.io/glance-attention/*"],
-  "content_security_policy": {"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"},
+  "description": "Capture full pages for private, local attention analysis.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "content_security_policy": {"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' data: blob:"},
   "browser_specific_settings": {"gecko": {"id": "glance@cgsudo.github.io", "strict_min_version": "128.0"}},
   "background": {"service_worker": "background.js"},
-  "action": {"default_title": "Analyze visible tab with Glance"},
-  "options_ui": {"page": "options.html", "open_in_tab": true},
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Analyse this full page",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
   "commands": {
     "_execute_action": {
       "suggested_key": {"default": "Alt+Shift+G"},
-      "description": "Analyze visible tab"
+      "description": "Analyse this full page"
     }
   }
 }

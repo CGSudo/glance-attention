@@ -1,8 +1,78 @@
 import React, { useState } from 'react';
-import { GraduationCap, ArrowRight, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { GraduationCap, ArrowRight, ArrowLeft, AlertTriangle, ExternalLink, BookOpen, ShieldCheck } from 'lucide-react';
+import { WalkthroughGuide } from '../components/WalkthroughGuide';
 
 export const Learn: React.FC = () => {
   const [activeStep, setActiveStep] = useState(1);
+
+  const RESEARCH_PAPERS = [
+    {
+      id: 'unisal',
+      title: 'Unified Image and Video Saliency Modeling (UNISAL)',
+      authors: 'Richard Droste, Jianbo Jiao, J. Alison Noble',
+      institution: 'University of Oxford',
+      venue: 'ECCV 2020',
+      year: 2020,
+      link: 'https://arxiv.org/abs/2003.05477',
+      license: 'Apache-2.0',
+      description: 'Unified lightweight image and video saliency prediction with domain-specific subnets.',
+    },
+    {
+      id: 'transalnet',
+      title: 'TranSalNet: Towards perceptually relevant visual saliency prediction',
+      authors: 'Lou et al.',
+      institution: 'Cardiff University',
+      venue: 'Neurocomputing 2022',
+      year: 2022,
+      link: 'https://doi.org/10.1016/j.neucom.2022.04.080',
+      license: 'MIT',
+      description: 'Combines multi-scale CNN features with transformer attention to capture global visual context.',
+    },
+    {
+      id: 'sum',
+      title: 'SUM: Saliency Unification through Mamba for Visual Attention Modeling',
+      authors: 'Alireza Hosseini, Amirhossein Kazerouni, Saeed Akhavan, Michael Brudno, Babak Taati',
+      institution: 'University of Tehran; University of Toronto; Vector Institute',
+      venue: 'WACV 2025',
+      year: 2025,
+      link: 'https://arxiv.org/abs/2406.17815',
+      license: 'MIT',
+      description: 'Selective-state space modeling (Mamba) to unify saliency across varied visual domains.',
+    },
+    {
+      id: 'itti',
+      title: 'A Model of Saliency-Based Visual Attention for Rapid Scene Analysis',
+      authors: 'Laurent Itti, Christof Koch, Ernst Niebur',
+      institution: 'Caltech',
+      venue: 'IEEE PAMI 1998',
+      year: 1998,
+      link: 'https://doi.org/10.1109/34.730558',
+      license: 'Academic Reference',
+      description: 'Seminal biological attention model introducing bottom-up feature maps and inhibition of return.',
+    },
+    {
+      id: 'metrics',
+      title: 'What do different evaluation metrics tell us about saliency models?',
+      authors: 'Zoya Bylinskii, Tilke Judd, Aude Oliva, Antonio Torralba, Frédo Durand',
+      institution: 'MIT',
+      venue: 'IEEE PAMI 2019 / arXiv 2016',
+      year: 2019,
+      link: 'https://arxiv.org/abs/1604.03605',
+      license: 'Academic Reference',
+      description: 'Foundational analysis of saliency metrics: AUC, Correlation Coefficient (CC), and NSS.',
+    },
+    {
+      id: 'benchmark',
+      title: 'MIT/Tübingen Saliency Benchmark (MIT300)',
+      authors: 'MIT & University of Tübingen',
+      institution: 'MIT / Tübingen',
+      venue: 'Benchmark Website',
+      year: 2018,
+      link: 'https://saliency.tuebingen.ai/',
+      license: 'Benchmark Reference',
+      description: 'Standard independent leaderboard comparing saliency models against split-half human ceilings.',
+    },
+  ];
 
   const steps = [
     {
@@ -151,6 +221,9 @@ export const Learn: React.FC = () => {
         </p>
       </div>
 
+      {/* Walkthrough Guide: "How Glance judges a design" (Brief A-3 Item 14) */}
+      <WalkthroughGuide />
+
       {/* Stepper Tabs */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2 overflow-x-auto">
         {steps.map((s) => (
@@ -269,6 +342,87 @@ export const Learn: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* About / Research Panel (Brief A-3 Item 16) */}
+      <section
+        id="research"
+        aria-label="About and Peer-Reviewed Research Papers"
+        className="rounded-2xl border border-teal-800/60 bg-neutral-900/70 p-6 md:p-8 space-y-6 scroll-mt-6"
+      >
+        <div className="space-y-2 border-b border-neutral-800 pb-4">
+          <div className="inline-flex items-center gap-1.5 text-xs text-teal-400 font-semibold">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Peer-Reviewed Science</span>
+          </div>
+          <h2 className="text-xl font-bold text-neutral-100">
+            Backed by Peer-Reviewed Research
+          </h2>
+          <p className="text-xs text-neutral-400 leading-relaxed max-w-2xl">
+            Glance models are built on published scientific literature and validated against standard benchmarks.
+            Attention predictions estimate where human viewers tend to look in the first ~3 seconds of free viewing;
+            they are statistical estimates, not guarantees of individual human behavior or conversion.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {RESEARCH_PAPERS.map((paper) => (
+            <div
+              key={paper.id}
+              className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-2.5 flex flex-col justify-between"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded bg-teal-950 border border-teal-800/60 px-1.5 py-0.5 text-[10px] font-mono font-medium text-teal-300">
+                    {paper.venue}
+                  </span>
+                  <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
+                    {paper.license}
+                  </span>
+                </div>
+                <h3 className="text-xs font-bold text-neutral-100 leading-snug">
+                  {paper.title}
+                </h3>
+                <p className="text-[11px] text-teal-400/90 font-medium">
+                  {paper.authors} ({paper.institution})
+                </p>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  {paper.description}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-neutral-800/80">
+                <a
+                  href={paper.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 font-medium underline underline-offset-2"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  <span>Read publication ({paper.year})</span>
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-lg bg-teal-950/30 border border-teal-800/40 p-3 text-xs text-neutral-300 flex items-start gap-2.5">
+          <GraduationCap className="h-4 w-4 text-teal-400 shrink-0 mt-0.5" />
+          <p className="leading-relaxed text-[11px]">
+            Benchmark datasets (MIT300, CAT2000, UEyes) are linked directly and never redistributed.
+            Learn more in our full{' '}
+            <a
+              href="https://cgsudo.github.io/glance-attention/citations.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-400 hover:text-teal-300 underline font-medium"
+            >
+              CITATIONS.md research credits
+            </a>
+            .
+          </p>
+        </div>
+      </section>
     </div>
   );
 };

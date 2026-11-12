@@ -2,7 +2,7 @@ use crate::{
     Error, Result,
     metrics::{Heatmap, fog_threshold},
 };
-use image::{DynamicImage, ImageFormat, Rgb, RgbImage};
+use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
 use std::io::Cursor;
 
 fn color(v: f32) -> [u8; 3] {
@@ -28,6 +28,12 @@ fn color(v: f32) -> [u8; 3] {
 pub fn png(image: RgbImage) -> Result<Vec<u8>> {
     let mut out = Cursor::new(Vec::new());
     DynamicImage::ImageRgb8(image).write_to(&mut out, ImageFormat::Png)?;
+    Ok(out.into_inner())
+}
+
+pub fn png_rgba(image: RgbaImage) -> Result<Vec<u8>> {
+    let mut out = Cursor::new(Vec::new());
+    DynamicImage::ImageRgba8(image).write_to(&mut out, ImageFormat::Png)?;
     Ok(out.into_inner())
 }
 
@@ -76,8 +82,11 @@ pub fn heatmap(map: &Heatmap) -> Result<Vec<u8>> {
         .copied()
         .fold(0.0, f32::max)
         .max(f32::MIN_POSITIVE);
-    png(RgbImage::from_fn(map.width, map.height, |x, y| {
-        Rgb(color(map.values[(y * map.width + x) as usize] / max))
+    png_rgba(RgbaImage::from_fn(map.width, map.height, |x, y| {
+        let v = (map.values[(y * map.width + x) as usize] / max).clamp(0.0, 1.0);
+        let c = color(v);
+        let alpha = (v * 255.0).round() as u8;
+        Rgba([c[0], c[1], c[2], alpha])
     }))
 }
 

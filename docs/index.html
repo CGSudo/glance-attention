@@ -11,6 +11,7 @@
 <meta name="site-kind" content="software">
 <meta name="theme-color" content="#075c56">
 <link rel="canonical" href="https://cgsudo.github.io/glance-attention/index.html">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="landing.css">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Glance">
@@ -32,7 +33,7 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="index.html" aria-label="Glance home">
-      <span class="brand-dot" aria-hidden="true"></span>
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" role="img" aria-hidden="true" style="vertical-align: -3px; margin-right: 6px;"><path d="M 3.5 16 C 8.5 7.5 23.5 7.5 28.5 16 C 23.5 24.5 8.5 24.5 3.5 16 Z" stroke="#0F766E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.5" cy="14" r="4.25" fill="#0F766E"/></svg>
       <span>Glance</span>
     </a>
     <nav class="main-nav" aria-label="Main navigation">
@@ -175,6 +176,42 @@
         </div>
         <p>Glance is designed to run installed ONNX models locally. The first model download needs a connection. External integrations and MCP clients have their own privacy boundaries. No user images or telemetry are ever sent to an external server.</p>
         <a class="callout-action" href="integrations.html">Review integration setup &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Backed by Peer-Reviewed Research -->
+  <section class="landing-section" id="research">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Peer-reviewed literature</div>
+        <h2>Backed by published visual attention research</h2>
+        <p>Glance models are built on peer-reviewed saliency publications and evaluated on independent benchmarks against split-half human eye-tracking ceilings. Predictions estimate where human eyes tend to land in early viewing (~3 seconds); they are statistical estimates, not guarantees.</p>
+      </div>
+      <div class="learn-grid">
+        <div class="learn-item">
+          <div class="learn-tag">UNISAL · Fast &amp; Light</div>
+          <h3>UNISAL</h3>
+          <p><strong>Fast and light. Good first check for any image.</strong> Unified lightweight model with domain subnets for image and video saliency.</p>
+          <p style="margin-top: 0.5rem;"><a href="https://arxiv.org/abs/2003.05477">Droste et al., ECCV 2020 &rarr;</a></p>
+        </div>
+        <div class="learn-item">
+          <div class="learn-tag">TranSalNet · Global Context</div>
+          <h3>TranSalNet</h3>
+          <p><strong>Sees the whole layout. Better on busy pages where context matters.</strong> Combines CNNs with transformer attention blocks for global structure.</p>
+          <p style="margin-top: 0.5rem;"><a href="https://doi.org/10.1016/j.neucom.2022.04.080">Lou et al., Neurocomputing 2022 &rarr;</a></p>
+        </div>
+        <div class="learn-item">
+          <div class="learn-tag">SUM · Cross-Domain</div>
+          <h3>SUM</h3>
+          <p><strong>Tuned per content type: web pages, ads, e-commerce, photos.</strong> State-space modeling (Mamba) adapting to varied visual design domains.</p>
+          <p style="margin-top: 0.5rem;"><a href="https://arxiv.org/abs/2406.17815">Hosseini et al., WACV 2025 &rarr;</a></p>
+        </div>
+      </div>
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a class="button" href="app/#learn">Open in-app guide: How Glance judges a design &rarr;</a>
+        <span style="display: inline-block; margin: 0 0.75rem; color: var(--text-muted, #94a3b8);">·</span>
+        <a href="https://saliency.tuebingen.ai/">MIT/Tübingen Saliency Benchmark &rarr;</a>
       </div>
     </div>
   </section>
