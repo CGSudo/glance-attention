@@ -7,6 +7,10 @@ for (const model of registry.filter(model => ['unisal', 'sum', 'transalnet'].inc
   if (!bytes && model.id === 'unisal') bytes = await readFile('../../docs/app/models/unisal.onnx').catch(() => undefined);
   if (!bytes) {
     const response = await fetch(model.url, { signal: AbortSignal.timeout(600_000) });
+    if (response.status === 404 && model.id !== 'unisal') {
+      console.warn(`${model.id}: release not published; Pages mirror pending`);
+      continue;
+    }
     if (!response.ok) throw Error(`${model.id}: HTTP ${response.status}`);
     bytes = new Uint8Array(await response.arrayBuffer());
   }

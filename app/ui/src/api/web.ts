@@ -10,7 +10,7 @@ export class WebTransport implements Transport {
   private provider = 'Not initialized (WebGPU preferred, WASM fallback)';
 
   constructor(private base = new URL(import.meta.env.BASE_URL, location.href).href, private extension = false,
-    private onStatus: (status: string) => void = () => {}, private backend?: 'wasm') {}
+    private onStatus: (status: string) => void = () => {}) {}
 
   async getModels(): Promise<ModelInfo[]> {
     return Promise.all(browserModels.filter(model => this.extension || model.id === 'unisal').map(async model => ({
@@ -52,7 +52,7 @@ export class WebTransport implements Transport {
     const id = ++this.sequence;
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve: value => resolve(value as T), reject, progress, modelId });
-      this.worker!.postMessage({ id, kind, modelId, files, aois, contentType, layers, base: this.base, extension: this.extension, backend: this.backend } satisfies BrowserRequest);
+      this.worker!.postMessage({ id, kind, modelId, files, aois, contentType, layers, base: this.base, extension: this.extension } satisfies BrowserRequest);
     });
   }
   installModel(id: string, progress?: (progress: InstallProgress) => void) {

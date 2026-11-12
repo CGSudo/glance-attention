@@ -22,5 +22,7 @@ test('download verifies SHA-256, caps bytes, reports progress, and falls back on
     await assert.rejects(verifyModel(bytes.subarray(1), model), /size mismatch/);
     await assert.rejects(downloadModel(['mirror'], { ...model, size_bytes: 2 }, () => {}), /exceeds registry size/);
     await assert.rejects(downloadModel(['mirror'], { ...model, size_bytes: 4 }, () => {}), /incomplete download/);
+    globalThis.fetch = async () => new Response(null, { status: 404 });
+    await assert.rejects(downloadModel(['release', 'mirror'], model, () => {}), /not published yet/);
   } finally { globalThis.fetch = originalFetch; }
 });

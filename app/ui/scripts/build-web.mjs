@@ -10,7 +10,13 @@ await copyModel('unisal', '../../docs/app/models');
 const license = await readFile('../../models/licenses/UNISAL-Apache-2.0.txt', 'utf8');
 await writeFile('../../docs/app/models/NOTICE', `UNISAL — Apache-2.0\nDroste, Jiao, Noble. Unified Image and Video Saliency Modeling. ECCV 2020. University of Oxford.\nhttps://github.com/rdroste/unisal\n\n${license}`);
 if (process.env.GLANCE_MIRROR_MODELS === '1') {
-  for (const id of ['sum', 'transalnet']) await copyModel(id, '../../docs/app/models');
+  for (const id of ['sum', 'transalnet']) {
+    try { await copyModel(id, '../../docs/app/models'); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      console.warn(`${id}: Pages mirror pending model release`);
+    }
+  }
   for (const name of ['SUM-MIT.txt', 'TranSalNet-MIT.txt', 'Mamba-Apache-2.0.txt']) {
     await copyFile(`../../models/licenses/${name}`, `../../docs/app/models/${name}`);
   }

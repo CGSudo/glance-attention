@@ -12,5 +12,21 @@ Glance estimates early free-viewing attention from images. It does not record ey
 - [Comparisons](https://cgsudo.github.io/glance-attention/compare/index.html): attributed vendor facts and unknowns.
 - [Citations](https://cgsudo.github.io/glance-attention/citations.html): sources and license boundaries.
 
+## Comparisons
+- [Attention Insight alternative](https://cgsudo.github.io/glance-attention/alternatives/attention-insight-alternative.html): dated pricing, local processing, model terms and hosted-workflow tradeoffs.
+- [Neurons Predict alternative](https://cgsudo.github.io/glance-attention/alternatives/neurons-predict-alternative.html): dated pricing, local processing, model terms and hosted-workflow tradeoffs.
+- [Brainsight alternative](https://cgsudo.github.io/glance-attention/alternatives/brainsight-alternative.html): dated pricing, local processing, model terms and hosted-workflow tradeoffs.
+- [Feng-GUI alternative](https://cgsudo.github.io/glance-attention/alternatives/feng-gui-alternative.html): dated pricing, local processing, model terms and hosted-workflow tradeoffs.
+- [Glance vs Attention Insight](https://cgsudo.github.io/glance-attention/compare/glance-vs-attention-insight.html): vendor sources, evidence limits and workflow comparison.
+- [Glance vs Neurons Predict](https://cgsudo.github.io/glance-attention/compare/glance-vs-neurons.html): vendor sources, evidence limits and workflow comparison.
+- [Glance vs Brainsight](https://cgsudo.github.io/glance-attention/compare/glance-vs-brainsight.html): vendor sources, evidence limits and workflow comparison.
+- [Glance vs Feng-GUI](https://cgsudo.github.io/glance-attention/compare/glance-vs-feng-gui.html): vendor sources, evidence limits and workflow comparison.
+- [Free attention heatmap tools](https://cgsudo.github.io/glance-attention/best-free-attention-heatmap-tools.html): Glance, research code, evaluation tooling and manual inspection serve different jobs.
+
+## Guides
+- [Is predictive eye tracking accurate?](https://cgsudo.github.io/glance-attention/guides/is-predictive-eye-tracking-accurate.html): Understand what a 94% headline can mean, human agreement ceilings, saliency metrics and the limits of predicting gaze from a design.
+- [How to use an attention heatmap for landing pages](https://cgsudo.github.io/glance-attention/guides/attention-heatmap-for-landing-pages.html): Check a landing page headline, image and CTA with predicted attention. Follow a practical review workflow and learn what heatmaps cannot prove.
+- [The squint test for designers: value study vs model](https://cgsudo.github.io/glance-attention/guides/squint-test-for-designers.html): Use the painter’s squint test to inspect visual hierarchy, then compare it with a saliency model. Learn where each helps and where both stop.
+
 ## Publication status
-TODO-verify: replace glance.example with confirmed GitHub Pages base URL before publication. Maintained by CGSudo.
+Base URL: https://cgsudo.github.io/glance-attention/. Verify deployed demo, release availability and model asset terms before publication. Maintained by CGSudo.

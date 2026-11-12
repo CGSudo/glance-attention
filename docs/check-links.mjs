@@ -29,9 +29,34 @@ assert.equal(targetFor('mailto:test@example.org', path.join(root, 'index.html'))
 await walk(root);
 assert.ok(files.length, 'No HTML files found');
 const errors = [];
+const titles = new Set();
+const descriptions = new Set();
+const sitemap = await readFile(path.join(root, 'sitemap.xml'), 'utf8');
 let links = 0;
 for (const from of files) {
   const content = await readFile(from, 'utf8');
+  try {
+    const title = content.match(/<title>(.*?)<\/title>/is)?.[1].trim();
+    const description = content.match(/<meta\s+name="description"\s+content="([^"]+)"/i)?.[1].trim();
+    assert.ok(title && description, 'Missing title or description');
+    assert.ok(!titles.has(title), `Duplicate title: ${title}`);
+    assert.ok(!descriptions.has(description), `Duplicate description: ${description}`);
+    titles.add(title);
+    descriptions.add(description);
+    for (const block of content.matchAll(/<script\s+type="application\/ld\+json">(.*?)<\/script>/gis)) JSON.parse(block[1]);
+    const relative = path.relative(root, from).split(path.sep).join('/');
+    if (/^(alternatives\/|guides\/|best-free-attention-heatmap-tools\.html$)/.test(relative)) {
+      assert.ok(sitemap.includes(`<loc>${base}${relative}</loc>`), 'Missing sitemap entry');
+      assert.ok(content.includes('<meta name="robots" content="index,follow">'), 'Missing index,follow');
+      assert.ok(content.includes(`rel="canonical" href="${base}${relative}"`), 'Incorrect canonical');
+      assert.ok(!/\d+%\s*accura/i.test(content), 'Unattributed accuracy percentage; review before publication');
+      if (relative.startsWith('guides/')) {
+        const article = content.split('</h1>')[1].split('<section><h2>Frequently asked questions')[0];
+        const words = article.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+        assert.ok(words >= 500 && words <= 800, `Guide body has ${words} words; expected 500–800`);
+      }
+    }
+  } catch (error) { errors.push(`${path.relative(root, from)}: ${error.message}`); }
   // shortcut: authored HTML uses quoted href/src/content attributes; use an HTML parser if templates introduce unquoted attributes.
   const refs = [...content.matchAll(/\b(?:href|src)\s*=\s*(["'])(.*?)\1/gi)].map(m => m[2]);
   for (const tag of content.matchAll(/<meta\b[^>]*>/gi)) {
@@ -57,4 +82,4 @@ for (const from of files) {
   }
 }
 if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }
-else console.log(`PASS: ${files.length} HTML files, ${links} internal references; all resolve.`);
+else console.log(`PASS: ${files.length} HTML files, ${links} internal references; links, unique metadata, JSON-LD and new-page SEO checks pass.`);

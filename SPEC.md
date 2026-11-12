@@ -57,9 +57,9 @@ Unknown benchmark values = null, never guessed.
 ```
 GET  /v1/models                          -> [{id,name,tasks,license,installed}]
 POST /v1/models/{id}/install             -> {ok}
-POST /v1/analyze   multipart: image, model?=default, aois?=JSON
+POST /v1/analyze   multipart: image, model?=default, aois?=JSON, layers?=squint
      -> {model, width, height, heatmap_png_b64, overlay_png_b64, fog_png_b64,
-         scanpath:[{x,y,order}], metrics:{clarity, aoi_share:[{id,share}], agreement?}}
+         squint_png_b64? (when layers=squint), scanpath:[{x,y,order}], metrics:{clarity, aoi_share:[{id,share}], agreement?}}
 POST /v1/compare   multipart: a, b, model?, aois?  -> {a:<analyze>, b:<analyze>, delta:{...}, cc}
 POST /v1/video     multipart: frames[] | video  -> {fps, frames:[{t, heatmap_png_b64, aoi_share}]}
 ```

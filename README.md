@@ -6,8 +6,10 @@
 </p>
 
 <p align="center">
-  <strong>Free, open-source desktop attention prediction: see what gets the first glance in ~3 seconds, processed completely on your computer.</strong>
+  <strong>Free, open source desktop attention heatmap and saliency prediction (predictive eye tracking): see what gets the first glance in ~3 seconds, processed completely on your computer.</strong>
 </p>
+
+Looking for a free, open-source alternative to Attention Insight, Neurons Predict, Brainsight or Feng-GUI? [See the comparisons](https://cgsudo.github.io/glance-attention/compare/).
 
 <p align="center">
   <a href="https://github.com/CGSudo/glance-attention/releases"><img src="https://img.shields.io/github/v/release/CGSudo/glance-attention?color=0F766E&label=release" alt="Release"></a>

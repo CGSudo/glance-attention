@@ -54,7 +54,7 @@ async function handle(request: BrowserRequest) {
     }
     activeModel = model.id;
   }
-  ready ??= init({ module_or_path: wasmUrl });
+  ready ??= init({ module_or_path: wasmUrl }).catch(error => { ready = undefined; throw error; });
   await ready;
   const analyze = async (file: Blob): Promise<string> => {
     if (file.size > 25 * 1024 * 1024) throw new Error('Image exceeds 25 MB upload limit');

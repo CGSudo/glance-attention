@@ -11,13 +11,17 @@ export async function verifyModel(bytes: Uint8Array, model: DownloadModel): Prom
 
 export async function downloadModel(urls: string[], model: DownloadModel, progress: (downloaded: number) => void): Promise<Uint8Array> {
   let response: Response | undefined;
+  let missing = false;
   for (const url of urls) {
     try {
       const candidate = await fetch(url, { signal: AbortSignal.timeout(600_000) });
+      if (candidate.status === 404) missing = true;
       if (candidate.ok) { response = candidate; break; }
     } catch { /* GitHub Releases may reject CORS; try the Pages mirror. */ }
   }
-  if (!response?.body) throw new Error(`${model.id}: download failed. Check your connection, then retry.`);
+  if (!response?.body) throw new Error(missing
+    ? `${model.id}: model not published yet. Try the desktop app or retry after publication.`
+    : `${model.id}: download failed. Check your connection, then retry.`);
   const reader = response.body.getReader();
   const bytes = new Uint8Array(model.size_bytes);
   let offset = 0;
