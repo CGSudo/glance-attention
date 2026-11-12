@@ -96,6 +96,7 @@ fn allowed_origin(origin: &HeaderValue) -> bool {
         "null" | "tauri://localhost" | "http://tauri.localhost" | "https://tauri.localhost"
     ) || origin
         .strip_prefix("chrome-extension://")
+        .or_else(|| origin.strip_prefix("moz-extension://"))
         .is_some_and(|id| {
             !id.is_empty() && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-')
         })
@@ -212,6 +213,7 @@ struct Upload {
     model: Option<String>,
     content_type: Option<ContentType>,
     aois: Vec<Aoi>,
+    layers: Option<String>,
     images: Vec<(String, Vec<u8>)>,
 }
 
@@ -225,6 +227,19 @@ async fn upload(mut multipart: Multipart) -> Result<Upload, ApiError> {
     {
         let name = field.name().unwrap_or_default().to_owned();
         match name.as_str() {
+            "layers" => {
+                let value = field
+                    .text()
+                    .await
+                    .map_err(|e| ApiError(e.status(), e.body_text()))?;
+                if data.layers.is_some() || value != "squint" {
+                    return Err(ApiError(
+                        StatusCode::BAD_REQUEST,
+                        "layers must be squint, supplied once".into(),
+                    ));
+                }
+                data.layers = Some(value);
+            }
             "content_type" => {
                 if data.content_type.is_some() {
                     return Err(ApiError(
@@ -312,11 +327,12 @@ async fn analyze(
         ));
     }
     run(state, move |engine| {
-        Ok(engine.analyze_bytes_with_content_type(
-            &data.images[0].1,
+        Ok(engine.analyze_with_layers(
+            &decode(&data.images[0].1)?,
             data.model.as_deref(),
             &data.aois,
             data.content_type.unwrap_or_default(),
+            data.layers.is_some(),
         )?)
     })
     .await
@@ -490,6 +506,7 @@ mod tests {
                 vec![
                     ("image", png),
                     ("content_type", b"ui".as_slice()),
+                    ("layers", b"squint".as_slice()),
                     ("model", b"fixture".as_slice()),
                     ("aois", aois),
                 ],
@@ -534,6 +551,12 @@ mod tests {
                 "/v1/analyze" => {
                     assert_eq!(value["width"], 3);
                     assert_eq!(value["height"], 2);
+                    assert!(
+                        value["squint_png_b64"]
+                            .as_str()
+                            .unwrap()
+                            .starts_with("iVBOR")
+                    );
                     assert_eq!(value["metrics"]["aoi_share"][0]["share"], 100.0);
                 }
                 "/v1/compare" => {
@@ -547,6 +570,12 @@ mod tests {
             }
         }
         for fields in [
+            vec![("image", png), ("layers", b"unknown".as_slice())],
+            vec![
+                ("image", png),
+                ("layers", b"squint".as_slice()),
+                ("layers", b"squint".as_slice()),
+            ],
             vec![("image", png), ("content_type", b"invalid".as_slice())],
             vec![
                 ("image", png),
@@ -601,6 +630,7 @@ mod tests {
         for origin in [
             "null",
             "chrome-extension://abc",
+            "moz-extension://1234-abcd",
             "tauri://localhost",
             "https://tauri.localhost",
         ] {
@@ -610,6 +640,7 @@ mod tests {
             "https://example.com",
             "http://localhost:3000",
             "chrome-extension://abc.evil.com",
+            "moz-extension://abc.evil.com",
             "tauri://evil.com",
         ] {
             assert!(!allowed_origin(&HeaderValue::from_str(origin).unwrap()));

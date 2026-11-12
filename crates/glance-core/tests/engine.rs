@@ -1,3 +1,5 @@
+#![cfg(feature = "native")]
+
 use glance_core::{
     Engine,
     metrics::{self, Aoi, Heatmap},

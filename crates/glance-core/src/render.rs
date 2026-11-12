@@ -1,5 +1,5 @@
 use crate::{
-    Result,
+    Error, Result,
     metrics::{Heatmap, fog_threshold},
 };
 use image::{DynamicImage, ImageFormat, Rgb, RgbImage};
@@ -29,6 +29,44 @@ pub fn png(image: RgbImage) -> Result<Vec<u8>> {
     let mut out = Cursor::new(Vec::new());
     DynamicImage::ImageRgb8(image).write_to(&mut out, ImageFormat::Png)?;
     Ok(out.into_inner())
+}
+
+pub fn squint(image: &DynamicImage, sigma: f32) -> Result<Vec<u8>> {
+    if !sigma.is_finite() || !(0.0..=320.0).contains(&sigma) {
+        return Err(Error::Invalid(
+            "squint sigma must be finite, between 0 and 320".into(),
+        ));
+    }
+    let rgb = image.to_rgb8();
+    let luma = image::ImageBuffer::from_fn(rgb.width(), rgb.height(), |x, y| {
+        let p = rgb.get_pixel(x, y);
+        image::Luma([(0.2126 * f32::from(p[0])
+            + 0.7152 * f32::from(p[1])
+            + 0.0722 * f32::from(p[2]))
+        .round() as u8])
+    });
+    // Below 0.1 px, neighbor weights round away in an 8-bit image.
+    let blurred = if sigma < 0.1 {
+        luma
+    } else {
+        DynamicImage::ImageLuma8(luma).blur(sigma).to_luma8()
+    };
+    let min = blurred
+        .pixels()
+        .map(|p| f32::from(p[0]))
+        .fold(f32::INFINITY, f32::min);
+    let max = blurred
+        .pixels()
+        .map(|p| f32::from(p[0]))
+        .fold(f32::NEG_INFINITY, f32::max);
+    png(RgbImage::from_fn(rgb.width(), rgb.height(), |x, y| {
+        let v = if max > min {
+            (f32::from(blurred.get_pixel(x, y)[0]) - min) / (max - min) * 255.0
+        } else {
+            min
+        };
+        Rgb([v.round() as u8; 3])
+    }))
 }
 
 pub fn heatmap(map: &Heatmap) -> Result<Vec<u8>> {

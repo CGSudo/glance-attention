@@ -1,6 +1,8 @@
 use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "native")]
 use sha2::{Digest, Sha256};
+#[cfg(feature = "native")]
 use std::{
     fs,
     io::{Read, Write},
@@ -139,11 +141,13 @@ pub struct ModelSummary {
     pub condition: Option<Condition>,
 }
 
+#[cfg(feature = "native")]
 pub struct Registry {
     pub models: Vec<Model>,
     pub dir: PathBuf,
 }
 
+#[cfg(feature = "native")]
 impl Registry {
     pub fn load() -> Result<Self> {
         let dirs = directories::BaseDirs::new()
@@ -306,6 +310,7 @@ impl Registry {
     }
 }
 
+#[cfg(feature = "native")]
 fn check_digest(actual: &str, expected: &str) -> Result<()> {
     if expected.len() != 64
         || !expected.bytes().all(|b| b.is_ascii_hexdigit())
@@ -316,10 +321,12 @@ fn check_digest(actual: &str, expected: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "native")]
 pub fn verify_sha256(bytes: &[u8], expected: &str) -> Result<()> {
     check_digest(&hex(&Sha256::digest(bytes)), expected)
 }
 
+#[cfg(feature = "native")]
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

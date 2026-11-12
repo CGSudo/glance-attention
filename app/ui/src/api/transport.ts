@@ -7,7 +7,7 @@ export interface Transport {
   getSystemInfo(): Promise<SystemInfo>;
   getConfig(): Promise<Config>;
   setConfig(config: Config): Promise<Config>;
-  analyze(file: File | Blob, model?: string, aois?: Aoi[], contentType?: ContentType): Promise<AnalyzeResult>;
+  analyze(file: File | Blob, model?: string, aois?: Aoi[], contentType?: ContentType, layers?: 'squint'): Promise<AnalyzeResult>;
   compare(fileA: File | Blob, fileB: File | Blob, model?: string, aois?: Aoi[], contentType?: ContentType): Promise<CompareResult>;
   analyzeVideo(file: File | Blob, aois?: Aoi[], onProgress?: (pct: number) => void): Promise<VideoResult>;
 }

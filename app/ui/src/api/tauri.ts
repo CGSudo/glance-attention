@@ -35,8 +35,8 @@ export class TauriTransport implements Transport {
     return invoke<{ ok: boolean }>('import_model', { path, metadataPath });
   }
 
-  async analyze(file: Blob, model?: string, aois: Aoi[] = [], contentType: ContentType = 'natural') {
-    return invoke<AnalyzeResult>('analyze', { image: await bytes(file), model, aois, contentType });
+  async analyze(file: Blob, model?: string, aois: Aoi[] = [], contentType: ContentType = 'natural', layers?: 'squint') {
+    return invoke<AnalyzeResult>('analyze', { image: await bytes(file), model, aois, contentType, layers });
   }
 
   async compare(fileA: Blob, fileB: Blob, model?: string, aois: Aoi[] = [], contentType: ContentType = 'natural') {

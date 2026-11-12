@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/glance-core", "crates/glance-cli", "app/src-tauri"]
+members = ["crates/glance-core", "crates/glance-cli", "crates/glance-wasm", "app/src-tauri"]
 resolver = "3"
 
 [workspace.package]

@@ -113,13 +113,18 @@ async fn analyze(
     model: Option<String>,
     aois: Vec<Aoi>,
     content_type: Option<ContentType>,
+    layers: Option<String>,
 ) -> Result<AnalyzeResponse, String> {
+    if layers.as_deref().is_some_and(|layers| layers != "squint") {
+        return Err("layers must be squint".into());
+    }
     run(&engine, move |engine| {
-        engine.analyze_bytes_with_content_type(
-            &image,
+        engine.analyze_with_layers(
+            &decode(&image)?,
             model.as_deref(),
             &aois,
             content_type.unwrap_or_default(),
+            layers.is_some(),
         )
     })
     .await
@@ -360,11 +365,17 @@ mod tests {
             include_bytes!("../../../crates/glance-core/tests/fixtures/input.png").as_slice();
         let analysis = call(
             "analyze",
-            json!({"image":image,"model":"fixture","aois":[],"contentType":"ui"}),
+            json!({"image":image,"model":"fixture","aois":[],"contentType":"ui","layers":"squint"}),
         )
         .unwrap();
         assert_eq!(analysis["width"], 3);
         assert_eq!(analysis["height"], 2);
+        assert!(
+            analysis["squint_png_b64"]
+                .as_str()
+                .unwrap()
+                .starts_with("iVBOR")
+        );
         assert!(
             analysis["heatmap_png_b64"]
                 .as_str()

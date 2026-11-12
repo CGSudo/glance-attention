@@ -14,3 +14,11 @@ out/
 *.ort
 assets/video/stills/
 video/out/
+app/ui/src/wasm/
+docs/app/*
+!docs/app/models/
+docs/app/models/*
+!docs/app/models/unisal.onnx
+!docs/app/models/NOTICE
+out_*
+out_*/

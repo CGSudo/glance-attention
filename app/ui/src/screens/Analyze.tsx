@@ -27,6 +27,7 @@ interface AnalyzeProps {
   imageSrc: string;
   result: AnalyzeResult | null;
   isLoading: boolean;
+  loadingText?: string;
   error: string | null;
   aois: Aoi[];
   onUpdateAois: (aois: Aoi[]) => void;
@@ -38,6 +39,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   imageSrc,
   result,
   isLoading,
+  loadingText,
   error,
   aois,
   onUpdateAois,
@@ -48,6 +50,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   const [showGazeOrder, setShowGazeOrder] = useState(true);
   const [showFog, setShowFog] = useState(false);
   const [showUncertainty, setShowUncertainty] = useState(false);
+  const [showSquint, setShowSquint] = useState(false);
   const [opacity, setOpacity] = useState(70);
 
   // Zoom and Pan states
@@ -147,7 +150,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   // Export handlers
   const handleExportPng = async () => {
     if (!result) return;
-    const data = pngDataUrl(showFog ? result.fog_png_b64 : result.overlay_png_b64).split(',')[1];
+    const data = pngDataUrl(showSquint && result.squint_png_b64 ? result.squint_png_b64 : showFog ? result.fog_png_b64 : result.overlay_png_b64).split(',')[1];
     const bytes = Uint8Array.from(atob(data), character => character.charCodeAt(0));
     await saveFile(`glance-attention-${Date.now()}.png`, new Blob([bytes], { type: 'image/png' }));
   };
@@ -257,6 +260,10 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </div>
 
           {/* Opacity Slider */}
+          {result?.squint_png_b64 && <div className="flex items-center">
+            <button type="button" aria-pressed={showSquint} onClick={() => setShowSquint(!showSquint)} className={`rounded px-2 py-1 ${showSquint ? 'bg-teal-950 text-teal-300' : 'bg-neutral-800 text-neutral-300'}`}>Squint test</button>
+            <MetricsInfoPopover badge="Visual check" title="Squint test" formula="Rec.709 luma → Gaussian blur (σ = 2% of width) → normalize" source="Painter’s value study; Rec.709 luma coefficients" explanation="The painter's value study: grayscale + blur shows where brightness contrast pulls the eye. It cannot see faces or text — compare with the model heatmap." />
+          </div>}
           <div className="flex items-center gap-2 pl-2">
             <span className="text-neutral-400 text-[11px]">Opacity:</span>
             <div className="w-20">
@@ -372,7 +379,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
               <p className="mt-3 text-xs font-medium text-teal-300">
-                Running saliency inference...
+                {loadingText || 'Running saliency inference...'}
               </p>
             </div>
           )}
@@ -435,6 +442,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             )}
 
             {/* Scanpath Layer: Numbered dots 1-7 + connecting lines */}
+            {result?.squint_png_b64 && showSquint && <img src={pngDataUrl(result.squint_png_b64)} alt="Squint test: blurred grayscale values" className="absolute inset-0 h-full w-full object-contain pointer-events-none" draggable={false} />}
             {result && showGazeOrder && (
               <svg className="absolute inset-0 h-full w-full pointer-events-none">
                 {/* Connecting lines */}

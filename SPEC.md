@@ -15,7 +15,7 @@ crates/glance-cli/    `glance` binary: analyze | compare | serve | mcp | models
 app/                  Tauri 2 app; app/src-tauri depends on glance-core; app/ui = React+TS+Vite
 models/registry.json  model catalog (url, sha256, license, citation, benchmark)
 tools/export/         Python: PyTorch -> ONNX export + parity check per model
-integrations/         sharex/, chrome-extension/, figma-plugin/
+integrations/         sharex/, browser-extension/, figma-plugin/
 docs/                 GitHub Pages site (landing, how-it-works, science, compare pages)
 samples/              CC0 test images + expected outputs
 CITATIONS.md          every paper/model/dataset with institution + license

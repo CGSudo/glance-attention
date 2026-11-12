@@ -73,15 +73,26 @@ function panel() {
   const { document, elements } = panel();
   let token;
   let mode = "ok";
+  let transportMode = "server";
+  let browserRequests = 0;
   let requests = 0;
   const context = {
     document, location: { hash: "#capture" }, FormData, Blob, AbortSignal,
     sessionStorage: { getItem() {}, setItem() {} },
     chrome: {
-      runtime: { openOptionsPage() {} },
-      storage: { local: { async get() { return { token }; } }, session: {
+      runtime: { openOptionsPage() {}, getURL(path) { return `chrome-extension://test${path}`; } },
+      storage: { local: { async get() { return { token, mode: transportMode }; } }, session: {
         async get() { return { capture: { original: "data:image/png;base64,iVBORw==" } }; }, async remove() {}
       } }
+    },
+    WebTransport: class {
+      async analyze(image, model, aois, contentType, layers) {
+        browserRequests++;
+        assert.ok(image instanceof Blob);
+        assert.equal(model, 'unisal');
+        assert.equal(layers, 'squint');
+        return { width: 200, height: 100, overlay_png_b64: 'iVBORw==', squint_png_b64: 'iVBORw==', metrics: { clarity: 42 }, scanpath: [] };
+      }
     },
     async fetch(url, options) {
       if (url.startsWith("data:")) return { blob: async () => new Blob(["png"]) };
@@ -97,7 +108,8 @@ function panel() {
     }
   };
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "chrome-extension/result.js"), "utf8"), context);
+  const resultSource = fs.readFileSync(path.join(__dirname, "browser-extension/result.js"), "utf8").replace(/^import .*;\r?\n/gm, '');
+  vm.runInContext(resultSource, context);
   await new Promise(setImmediate);
   assert.match(elements["#status"].textContent, /save your Glance token/);
   assert.equal(requests, 0);
@@ -112,5 +124,11 @@ function panel() {
   mode = "unauthorized";
   await vm.runInContext("analyze()", context);
   assert.match(elements["#status"].textContent, /Token rejected/);
+  transportMode = 'browser';
+  token = undefined;
+  await vm.runInContext('analyze()', context);
+  assert.equal(browserRequests, 1);
+  assert.equal(elements['#squint'].disabled, false);
+  assert.equal(elements['#squint-image'].src, 'data:image/png;base64,iVBORw==');
   console.log(`PASS: ${jsCount} JS/CJS syntax checks, ${jsonCount} JSON parses, inline UI syntax, Figma export/validation/layer placement, Chrome auth/multipart/gaze/errors.`);
 })().catch((error) => { console.error(error); process.exitCode = 1; });

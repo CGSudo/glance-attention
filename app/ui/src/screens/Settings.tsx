@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Settings as SettingsIcon, Server, Palette, Sun, Moon, Check, RefreshCw } from 'lucide-react';
-import { isMockMode, isTauri, setTransport, HttpTransport, MockTransport, TauriTransport, SystemInfo } from '../api';
+import { isMockMode, isTauri, isWeb, setTransport, HttpTransport, MockTransport, TauriTransport, SystemInfo } from '../api';
 import { ColorRampType } from '../utils/colorRamps';
 
 interface SettingsProps {
@@ -62,7 +62,7 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
         <h1 className="text-2xl font-bold text-neutral-100">Application Settings</h1>
         <p className="text-xs text-neutral-400">
-          Configure local API transport, visual color ramps, theme, and accessibility controls.
+          {isWeb ? 'Browser backend, appearance, and accessibility.' : 'Configure local API transport, visual color ramps, theme, and accessibility controls.'}
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
       {/* 1. Local API Transport & Mock Switch */}
       {systemInfo && <p className="text-sm text-neutral-300">Provider {systemInfo.provider} · Recommended {systemInfo.recommended_model} · {systemInfo.cpu}{systemInfo.gpu_name && ` · ${systemInfo.gpu_name}`}</p>}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
+      {!isWeb && <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
           <div className="flex items-center gap-2">
             <Server className="h-4 w-4 text-teal-400" />
@@ -130,7 +130,7 @@ export const Settings: React.FC<SettingsProps> = ({
             Apply Transport Configuration
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* 2. Visual & Accessibility Settings */}
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-5">

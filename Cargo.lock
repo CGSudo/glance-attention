@@ -1394,6 +1394,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "glance-wasm"
+version = "0.1.0"
+dependencies = [
+ "glance-core",
+ "image",
+ "ort",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "glib"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

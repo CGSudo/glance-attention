@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Upload, ShieldCheck, Info } from 'lucide-react';
 import { InstallProgress, ModelInfo } from '../api/types';
 import { AccuracyCard } from '../components/AccuracyCard';
+import { isWeb } from '../api';
 
 interface ModelsProps {
   models: ModelInfo[];
@@ -48,6 +49,7 @@ export const Models: React.FC<ModelsProps> = ({
       </div>
 
       {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
+      {isWeb && <a className="inline-block rounded bg-teal-600 px-4 py-3 text-sm text-white" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a>}
 
       {/* Licensing & Honesty Banner */}
       <div className="rounded-lg bg-neutral-900/60 border border-neutral-800 p-4 text-xs text-neutral-300 flex items-start gap-3">

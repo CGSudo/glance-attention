@@ -77,9 +77,10 @@ export class HttpTransport implements Transport {
     return res.json();
   }
 
-  async analyze(file: File | Blob, model?: string, aois: Aoi[] = [], contentType: ContentType = 'natural'): Promise<AnalyzeResult> {
+  async analyze(file: File | Blob, model?: string, aois: Aoi[] = [], contentType: ContentType = 'natural', layers?: 'squint'): Promise<AnalyzeResult> {
     const formData = new FormData();
     formData.append('image', file);
+    if (layers) formData.append('layers', layers);
     if (model) formData.append('model', model);
     formData.append('content_type', contentType);
     if (aois.length > 0) formData.append('aois', JSON.stringify(aois));

@@ -1,0 +1,21 @@
+[package]
+name = "glance-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+glance-core = { path = "../glance-core", default-features = false }
+wasm-bindgen = "=0.2.130"
+image.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+glance-core = { path = "../glance-core" }
+ort.workspace = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

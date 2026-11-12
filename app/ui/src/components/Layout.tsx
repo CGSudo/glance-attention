@@ -1,5 +1,6 @@
 import React from 'react';
 import { ModelSwitcher } from './ModelSwitcher';
+import { isWeb } from '../api';
 import { ContentType, ModelInfo, SystemInfo } from '../api/types';
 import {
   Home,
@@ -110,7 +111,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
         {/* Center: Navigation Tabs */}
         <nav className="flex items-center space-x-1" aria-label="Main Navigation">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter(item => !isWeb || (item.id !== 'video' && item.id !== 'batch')).map((item) => {
             const Icon = item.icon;
             const isActive = currentScreen === item.id;
             return (
@@ -152,6 +153,7 @@ export const Layout: React.FC<LayoutProps> = ({
           </button>
         </div>
       </header>
+      {isWeb && <p className="border-b border-neutral-800 px-4 py-2 text-xs text-teal-300">Runs in your browser. Images never leave your device.</p>}
 
       {/* Main Screen Content Area */}
       <main className="flex-1 overflow-auto bg-neutral-950">

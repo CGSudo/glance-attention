@@ -91,6 +91,7 @@ export interface AnalyzeResult {
   heatmap_png_b64: string;
   overlay_png_b64: string;
   fog_png_b64: string;
+  squint_png_b64?: string;
   scanpath: ScanpathPoint[];
   metrics: Metrics;
 }

@@ -7,6 +7,7 @@ interface MetricsInfoPopoverProps {
   formula: string;
   source: string;
   explanation: string;
+  badge?: string;
 }
 
 export const MetricsInfoPopover: React.FC<MetricsInfoPopoverProps> = ({
@@ -14,6 +15,7 @@ export const MetricsInfoPopover: React.FC<MetricsInfoPopoverProps> = ({
   formula,
   source,
   explanation,
+  badge = 'Verified Metric',
 }) => {
   return (
     <Popover.Root>
@@ -35,7 +37,7 @@ export const MetricsInfoPopover: React.FC<MetricsInfoPopoverProps> = ({
             <h4 className="font-semibold text-neutral-100 text-sm border-b border-neutral-800 pb-1.5 flex items-center justify-between">
               <span>{title}</span>
               <span className="text-[10px] font-mono text-teal-400 bg-teal-950/60 px-1.5 py-0.5 rounded border border-teal-800/40">
-                Verified Metric
+                {badge}
               </span>
             </h4>
 

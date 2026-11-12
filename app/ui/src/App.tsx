@@ -6,7 +6,7 @@ import { Analyze } from './screens/Analyze';
 import { Compare } from './screens/Compare';
 import { Models } from './screens/Models';
 import { Settings } from './screens/Settings';
-import { getTransport, pngDataUrl } from './api';
+import { getTransport, isWeb, pngDataUrl } from './api';
 import { ModelInfo, AnalyzeResult, Aoi, ContentType, InstallProgress, SystemInfo } from './api/types';
 import { ColorRampType } from './utils/colorRamps';
 
@@ -34,6 +34,7 @@ export const App: React.FC = () => {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [webStatus, setWebStatus] = useState('Preparing browser engine…');
   const [aois, setAois] = useState<Aoi[]>([]);
   const analysisRequest = useRef(0);
   const [recentItems, setRecentItems] = useState<
@@ -52,6 +53,16 @@ export const App: React.FC = () => {
       setStartupError(String(error));
     }
   }, []);
+
+  useEffect(() => {
+    const update = (event: Event) => setWebStatus((event as CustomEvent<string>).detail);
+    window.addEventListener('glance-web-status', update);
+    return () => window.removeEventListener('glance-web-status', update);
+  }, []);
+
+  useEffect(() => {
+    if (isWeb && currentScreen === 'settings') getTransport().getSystemInfo().then(setSystemInfo).catch(error => setStartupError(String(error)));
+  }, [currentScreen]);
 
   // Load models on mount
   useEffect(() => {
@@ -115,7 +126,7 @@ export const App: React.FC = () => {
       setAnalyzeError(null);
       try {
         const transport = getTransport();
-        const res = await transport.analyze(file, modelId, currentAois, currentContentType);
+        const res = await transport.analyze(file, modelId, currentAois, currentContentType, 'squint');
         const info = await transport.getSystemInfo();
         if (request !== analysisRequest.current) return;
         setResult(res);
@@ -281,6 +292,7 @@ export const App: React.FC = () => {
           imageSrc={imageSrc}
           result={result}
           isLoading={isAnalyzing}
+          loadingText={isWeb ? webStatus : undefined}
           error={analyzeError}
           aois={aois}
           onUpdateAois={setAois}
@@ -290,7 +302,8 @@ export const App: React.FC = () => {
 
       {currentScreen === 'compare' && <Compare activeModelId={activeModelId} contentType={contentType} />}
 
-      {currentScreen === 'video' && <Video />}
+      {currentScreen === 'video' && !isWeb && <Video />}
+      {isWeb && (currentScreen === 'video' || currentScreen === 'batch') && <p className="p-6"><a className="text-teal-300 underline" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a></p>}
 
       {currentScreen === 'models' && (
         <Models
@@ -304,7 +317,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {currentScreen === 'batch' && <Batch activeModelId={activeModelId} contentType={contentType} />}
+      {currentScreen === 'batch' && !isWeb && <Batch activeModelId={activeModelId} contentType={contentType} />}
 
       {currentScreen === 'learn' && <Learn />}
 

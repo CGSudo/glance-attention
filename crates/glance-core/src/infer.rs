@@ -1,20 +1,26 @@
 use crate::{
     Error, Result,
     metrics::{self, Aoi, AoiShare, CompareDelta, Heatmap},
-    registry::{Model, Registry},
+    registry::Model,
     render,
     scanpath::{self, Fixation},
+};
+#[cfg(feature = "native")]
+use crate::{
+    registry::Registry,
     system::{self, SystemInfo},
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use image::{DynamicImage, GenericImageView, ImageReader, imageops::FilterType};
+#[cfg(feature = "native")]
 use ort::{
     environment::Environment, ep::ExecutionProviderDispatch, session::Session, value::Tensor,
 };
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
+#[cfg(feature = "native")]
 use std::{
     collections::{HashMap, VecDeque},
-    io::Cursor,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -46,6 +52,7 @@ impl std::str::FromStr for ContentType {
     }
 }
 
+#[cfg(feature = "native")]
 impl ContentType {
     fn condition_index(self, model: &Model) -> Result<usize> {
         let (name, index) = match self {
@@ -69,19 +76,19 @@ impl ContentType {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AgreementInfo {
     pub uncertainty_png_b64: String,
     pub mean_cc: f32,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Metrics {
     pub clarity: f32,
     pub aoi_share: Vec<AoiShare>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agreement: Option<AgreementInfo>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AnalyzeResponse {
     pub model: String,
     pub width: u32,
@@ -89,6 +96,8 @@ pub struct AnalyzeResponse {
     pub heatmap_png_b64: String,
     pub overlay_png_b64: String,
     pub fog_png_b64: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub squint_png_b64: Option<String>,
     pub scanpath: Vec<Fixation>,
     pub metrics: Metrics,
 }
@@ -100,12 +109,14 @@ pub struct CompareResponse {
     pub cc: f32,
 }
 
+#[cfg(feature = "native")]
 struct Loaded {
     session: Session,
     state: HashMap<String, (Vec<i64>, Vec<f32>)>,
     provider: &'static str,
 }
 
+#[cfg(feature = "native")]
 pub struct Engine {
     pub registry: Registry,
     pub system: SystemInfo,
@@ -113,7 +124,8 @@ pub struct Engine {
     sessions: VecDeque<(String, Loaded)>,
 }
 
-fn environment() -> Result<Environment> {
+#[cfg(feature = "native")]
+pub fn environment() -> Result<Environment> {
     static ENV: Mutex<Option<Environment>> = Mutex::new(None);
     let mut env = ENV
         .lock()
@@ -145,6 +157,7 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     Ok(image)
 }
 
+#[cfg(feature = "native")]
 pub fn read_image(path: &Path) -> Result<DynamicImage> {
     if std::fs::metadata(path)?.len() > MAX_UPLOAD as u64 {
         return Err(Error::Invalid("image exceeds 25 MB upload limit".into()));
@@ -176,6 +189,7 @@ pub fn validate_aois(aois: &[Aoi]) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "native")]
 impl Engine {
     pub fn new(registry: Registry) -> Result<Self> {
         Ok(Self {
@@ -479,7 +493,7 @@ impl Engine {
             .or_else(|| outputs.get(&first_output))
             .ok_or_else(|| Error::Invalid("model has no heatmap output".into()))?;
         let (shape, data) = output.try_extract_tensor::<f32>()?;
-        let mut heatmap = postprocess(shape, data, &model, image.width(), image.height())?;
+        let heatmap = postprocess(shape, data, &model, image.width(), image.height())?;
         if temporal {
             for (name, shape) in states {
                 let output_name = model
@@ -499,19 +513,6 @@ impl Engine {
                 }
                 loaded.state.insert(name, (shape, data.to_vec()));
             }
-        }
-        if let Some(sigma) = model.blur_sigma.filter(|s| *s > 0.0) {
-            let buf = image::ImageBuffer::<image::Luma<f32>, _>::from_raw(
-                heatmap.width,
-                heatmap.height,
-                heatmap.values,
-            )
-            .ok_or_else(|| Error::Invalid("invalid blur dimensions".into()))?;
-            heatmap = Heatmap::new(
-                image.width(),
-                image.height(),
-                image::imageops::blur(&buf, sigma).into_raw(),
-            )?;
         }
         Ok(heatmap)
     }
@@ -554,29 +555,6 @@ impl Engine {
         }
     }
 
-    fn response(
-        image: &DynamicImage,
-        id: String,
-        map: &Heatmap,
-        aois: &[Aoi],
-        agreement: Option<AgreementInfo>,
-    ) -> Result<AnalyzeResponse> {
-        Ok(AnalyzeResponse {
-            model: id,
-            width: image.width(),
-            height: image.height(),
-            heatmap_png_b64: STANDARD.encode(render::heatmap(map)?),
-            overlay_png_b64: STANDARD.encode(render::overlay(image, map)?),
-            fog_png_b64: STANDARD.encode(render::fog(image, map)?),
-            scanpath: scanpath::predict(map),
-            metrics: Metrics {
-                clarity: metrics::clarity(map),
-                aoi_share: metrics::aoi_share(map, aois),
-                agreement,
-            },
-        })
-    }
-
     pub fn analyze(
         &mut self,
         image: &DynamicImage,
@@ -593,9 +571,20 @@ impl Engine {
         aois: &[Aoi],
         content_type: ContentType,
     ) -> Result<AnalyzeResponse> {
+        self.analyze_with_layers(image, model, aois, content_type, false)
+    }
+
+    pub fn analyze_with_layers(
+        &mut self,
+        image: &DynamicImage,
+        model: Option<&str>,
+        aois: &[Aoi],
+        content_type: ContentType,
+        squint: bool,
+    ) -> Result<AnalyzeResponse> {
         validate_aois(aois)?;
         let (id, map, agreement) = self.prediction(image, model, content_type)?;
-        Self::response(image, id, &map, aois, agreement)
+        response(image, id, &map, aois, agreement, squint)
     }
 
     pub fn analyze_bytes(
@@ -663,15 +652,68 @@ impl Engine {
             metrics::cc(&ma, &mb.resized(ma.width, ma.height)?)?
         };
         Ok(CompareResponse {
-            a: Self::response(a, ida, &ma, aois, aa)?,
-            b: Self::response(b, idb, &mb, aois, ab)?,
+            a: response(a, ida, &ma, aois, aa, false)?,
+            b: response(b, idb, &mb, aois, ab, false)?,
             delta: metrics::compare(&ma, &mb, aois)?,
             cc,
         })
     }
 }
 
-fn preprocess(image: &DynamicImage, model: &Model) -> Result<Vec<f32>> {
+pub fn response(
+    image: &DynamicImage,
+    id: String,
+    map: &Heatmap,
+    aois: &[Aoi],
+    agreement: Option<AgreementInfo>,
+    squint: bool,
+) -> Result<AnalyzeResponse> {
+    validate_image(image)?;
+    validate_aois(aois)?;
+    if (image.width(), image.height()) != (map.width, map.height) {
+        return Err(Error::Invalid(
+            "heatmap dimensions must match the image".into(),
+        ));
+    }
+    Ok(AnalyzeResponse {
+        model: id,
+        width: image.width(),
+        height: image.height(),
+        heatmap_png_b64: STANDARD.encode(render::heatmap(map)?),
+        overlay_png_b64: STANDARD.encode(render::overlay(image, map)?),
+        fog_png_b64: STANDARD.encode(render::fog(image, map)?),
+        squint_png_b64: squint
+            .then(|| {
+                render::squint(image, image.width() as f32 * 0.02)
+                    .map(|bytes| STANDARD.encode(bytes))
+            })
+            .transpose()?,
+        scanpath: scanpath::predict(map),
+        metrics: Metrics {
+            clarity: metrics::clarity(map),
+            aoi_share: metrics::aoi_share(map, aois),
+            agreement,
+        },
+    })
+}
+
+pub fn finish(
+    image: &DynamicImage,
+    model: &Model,
+    dims: &[i64],
+    output: &[f32],
+    aois: &[Aoi],
+    squint: bool,
+) -> Result<(AnalyzeResponse, Heatmap)> {
+    validate_aois(aois)?;
+    let map = postprocess(dims, output, model, image.width(), image.height())?;
+    let result = response(image, model.id.clone(), &map, aois, None, squint)?;
+    Ok((result, map))
+}
+
+pub fn preprocess(image: &DynamicImage, model: &Model) -> Result<Vec<f32>> {
+    validate_image(image)?;
+    model.validate()?;
     let filter = if model.input.interpolation == "lanczos" {
         FilterType::Lanczos3
     } else {
@@ -717,13 +759,17 @@ fn preprocess(image: &DynamicImage, model: &Model) -> Result<Vec<f32>> {
     Ok(data)
 }
 
-fn postprocess(
+pub fn postprocess(
     shape: &[i64],
     data: &[f32],
     model: &Model,
     width: u32,
     height: u32,
 ) -> Result<Heatmap> {
+    model.validate()?;
+    if width == 0 || height == 0 || u64::from(width) * u64::from(height) > MAX_PIXELS {
+        return Err(Error::Invalid("invalid output image dimensions".into()));
+    }
     let spatial = if shape.len() >= 2 && shape[..shape.len() - 2].iter().all(|d| *d == 1) {
         &shape[shape.len() - 2..]
     } else if shape.len() == 4 && shape[0] == 1 && shape[3] == 1 {
@@ -765,10 +811,20 @@ fn postprocess(
             *v = (*v - max).exp();
         }
     }
-    Heatmap::new(width, height, values)
+    let mut heatmap = Heatmap::new(width, height, values)?;
+    if let Some(sigma) = model.blur_sigma.filter(|s| *s > 0.0) {
+        let buf = image::ImageBuffer::<image::Luma<f32>, _>::from_raw(
+            heatmap.width,
+            heatmap.height,
+            heatmap.values,
+        )
+        .ok_or_else(|| Error::Invalid("invalid blur dimensions".into()))?;
+        heatmap = Heatmap::new(width, height, image::imageops::blur(&buf, sigma).into_raw())?;
+    }
+    Ok(heatmap)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
 
