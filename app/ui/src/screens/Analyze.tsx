@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import * as Slider from '@radix-ui/react-slider';
+import * as Popover from '@radix-ui/react-popover';
 import {
   Layers,
   Eye,
@@ -17,6 +18,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronLeft,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Aoi, AnalyzeResult, ModelInfo } from '../api/types';
 import { ScreenId } from '../components/Layout';
@@ -33,6 +35,8 @@ import { saveFile } from '../utils/saveFile';
 import { buildAnalyzeSummary, getPositionLabel } from '../utils/analyzeSummary';
 import { HeatmapImage } from '../components/HeatmapImage';
 import { ColorRampType } from '../utils/colorRamps';
+import { useAnalyzeReveal } from './analyzeReveal';
+import './Analyze.css';
 
 interface AnalyzeProps {
   imageFile: File | null;
@@ -73,7 +77,7 @@ interface AnalyzeProps {
 export const Analyze: React.FC<AnalyzeProps> = ({
   imageFile: _imageFile,
   imageSrc,
-  result,
+  result: imageResult,
   isLoading,
   loadingText,
   error,
@@ -97,6 +101,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   onOpenClientGuide,
   onDismissClientGuideCard,
 }) => {
+  const result = imageSrc ? imageResult : null;
   // Layer states
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showGazeOrder, setShowGazeOrder] = useState(true);
@@ -129,35 +134,50 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // Clarity count-up animation
-  const [displayClarity, setDisplayClarity] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!result) {
-      setDisplayClarity(null);
-      return;
-    }
-    const target = result.metrics.clarity;
-    if (reducedMotion) {
-      setDisplayClarity(target);
-      return;
-    }
-    let startTimestamp: number | null = null;
-    const duration = 400;
-    let animId: number;
-
-    const step = (now: number) => {
-      if (!startTimestamp) startTimestamp = now;
-      const progress = Math.min((now - startTimestamp) / duration, 1);
-      const eased = 1 - (1 - progress) * (1 - progress);
-      setDisplayClarity(parseFloat((target * eased).toFixed(1)));
-      if (progress < 1) {
-        animId = requestAnimationFrame(step);
-      }
+  const summary = result ? buildAnalyzeSummary(result, aois) : '';
+  const reveal = useAnalyzeReveal(imageSrc, result, summary, isLoading || isScanning, reducedMotion);
+  const revealStyle = (at: number, rise = false): React.CSSProperties => {
+    const visible = reveal.elapsed >= at;
+    return {
+      opacity: visible ? 1 : 0,
+      visibility: visible ? 'visible' : 'hidden',
+      transform: rise && !reveal.reduced && !visible ? 'translateY(8px)' : 'none',
+      transition: `opacity ${reveal.reduced ? 150 : 250}ms cubic-bezier(0.23, 1, 0.32, 1), transform 250ms cubic-bezier(0.23, 1, 0.32, 1)`,
     };
-    animId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(animId);
-  }, [result, reducedMotion]);
+  };
+  const typingAt = reveal.timing?.typing ?? Infinity;
+  const typingEnd = reveal.timing?.typingEnd ?? Infinity;
+  const words = summary.split(/\s+/);
+  const visibleWords = reveal.elapsed >= typingEnd ? words.length : Math.max(0, Math.floor((reveal.elapsed - typingAt) / 35));
+  const cardAt = (index: number) => reveal.timing?.cards[index] ?? Infinity;
+
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const primaryRef = useRef<HTMLDivElement>(null);
+  const secondaryRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const primaryWidth = useRef(0);
+  const [compactToolbar, setCompactToolbar] = useState(false);
+  const [collapseToolbar, setCollapseToolbar] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (!toolbarRef.current || !primaryRef.current || !secondaryRef.current || !moreRef.current) return;
+      const available = toolbarRef.current.clientWidth - 16;
+      if (!compactToolbar) {
+        const children = Array.from(primaryRef.current.children).filter(node => node.getBoundingClientRect().width > 0);
+        primaryWidth.current = children.reduce((width, node) => width + node.getBoundingClientRect().width, 0) + (children.length - 1) * 4;
+      }
+      const secondaryWidth = secondaryRef.current.scrollWidth;
+      const moreWidth = moreRef.current.offsetWidth;
+      setCollapseToolbar(primaryWidth.current + secondaryWidth + 8 > available);
+      setCompactToolbar(primaryWidth.current + moreWidth + 8 > available);
+    };
+    const observer = new ResizeObserver(measure);
+    [toolbarRef.current, secondaryRef.current, moreRef.current].forEach(node => { if (node) observer.observe(node); });
+    measure();
+    return () => observer.disconnect();
+  }, [compactToolbar, showUploader, result?.squint_png_b64]);
 
   const fullPageResult = (result && 'isFullPage' in result && result.isFullPage)
     ? (result as FullPageAnalysisResult)
@@ -311,172 +331,9 @@ export const Analyze: React.FC<AnalyzeProps> = ({
     await exportAnalysisPdf(result, imageSrc, aois);
   };
 
-  return (
-    <div className="flex min-h-full w-full flex-col lg:flex-row lg:h-full lg:overflow-hidden">
-      {/* Recents and samples follow results below 1024px. */}
-        <div className={`${showUploader ? '' : 'lg:hidden'} order-last lg:order-none w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-r border-neutral-800 bg-neutral-900/85 p-3.5 overflow-y-auto space-y-3 z-10 shadow-xl`}>
-          <div className="hidden lg:flex items-center justify-end pb-2 border-b border-neutral-800">
-            <button
-              type="button"
-              onClick={() => setShowUploader(false)}
-              className="flex items-center gap-0.5 text-neutral-400 hover:text-neutral-200 text-xs px-1 py-1 rounded hover:bg-neutral-800"
-              aria-label="Hide"
-              title="Hide design input panel"
-              aria-expanded={showUploader}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Hide
-            </button>
-          </div>
-
-          <DesignUploader
-            compact
-            libraryOnly
-            onSelectImage={onSelectImage}
-            onSelectSample={onSelectSample}
-            recentImages={recentImages}
-            onSelectRecent={onSelectRecent}
-            onDeleteRecent={onDeleteRecent}
-            onClearRecent={onClearRecent}
-          />
-
-          <div className="pt-2 border-t border-neutral-800/80">
-            <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
-              Trust and privacy
-            </div>
-            <TrustBadges />
-          </div>
-        </div>
-
-      {/* Center: Interactive Canvas Area */}
-      <div className="relative w-full flex flex-col bg-neutral-950 lg:flex-1 lg:overflow-hidden lg:min-h-0 lg:min-w-0">
-        {/* Mobile Compact Uploader Bar (< 1024px) */}
-        <div className="lg:hidden shrink-0 border-b border-neutral-800 bg-neutral-900/95 px-3 py-0.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            onClick={() => hiddenFileInputRef.current?.click()}
-            aria-label="Select new image"
-            className="flex items-center gap-1 shrink-0 rounded border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors min-h-[44px]"
-          >
-            <Upload className="h-3.5 w-3.5 text-teal-400" />
-            <span>New image</span>
-          </button>
-
-        </div>
-        {/* Dismissible Hint Bar above Canvas (Desktop >= 1024px) */}
-        {showHintBar && (
-          <div className="hidden lg:flex items-center justify-between bg-teal-950/90 border-b border-teal-800/70 px-4 py-2.5 text-xs text-teal-200 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-teal-300">Quick tip:</span>
-              <span>Pick a sample or add your design. Results stay on your device.</span>
-            </div>
-            <button
-              type="button"
-              onClick={onDismissHint}
-              aria-label="Dismiss hint"
-              className="shrink-0 rounded text-teal-300 hover:text-white p-1 ml-4 text-xs font-bold"
-            >
-              Got it
-            </button>
-          </div>
-        )}
-
-        {/* Dismissible Guided Tutorial Prompt (Desktop >= 1024px) */}
-        {showClientGuideCard && (
-          <div className="hidden lg:flex items-center justify-between bg-neutral-900 border-b border-neutral-800 px-4 py-2 text-xs text-neutral-200 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-teal-400 font-bold">✨ Using Glance for clients?</span>
-              <span className="hidden sm:inline">See the 1-minute guide to get the most from reports.</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenClientGuide}
-                className="rounded bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-1 text-xs font-medium transition-colors"
-              >
-                See the 1-minute guide
-              </button>
-              <button
-                type="button"
-                onClick={onDismissClientGuideCard}
-                aria-label="Dismiss client guide suggestion"
-                className="shrink-0 rounded text-neutral-400 hover:text-white p-1 text-xs font-bold"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Canvas Toolbar (Desktop >= 1024px) */}
-        <div className="hidden lg:flex items-center justify-between shrink-0 overflow-x-auto whitespace-nowrap border-b border-neutral-800 bg-neutral-900/90 px-2 py-1 text-xs gap-1 [&>div]:shrink-0">
-          {/* Image selection and layers */}
+  const secondaryControls = (
+    <div className="analyze-toolbar-secondary">
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => hiddenFileInputRef.current?.click()}
-              aria-label="Select new image"
-              className="flex h-7 items-center gap-1 rounded border border-neutral-700 bg-neutral-800 px-2 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
-            >
-              <Upload className="h-3.5 w-3.5 text-teal-400" />
-              <span>New image</span>
-            </button>
-            <input
-              ref={hiddenFileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onClick={(event) => { event.currentTarget.value = ''; }}
-              onChange={handleFileChange}
-            />
-
-            {!showUploader && (
-              <button
-                type="button"
-                onClick={() => setShowUploader(true)}
-                className="flex h-7 w-7 items-center justify-center rounded border border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors"
-                aria-label="Show design input panel"
-                title="Show design input panel"
-                aria-expanded={showUploader}
-              >
-                <Upload className="h-3.5 w-3.5 text-teal-400" />
-              </button>
-            )}
-
-            <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
-
-            <button
-              type="button"
-              onClick={() => setShowHeatmap(!showHeatmap)}
-              disabled={!result}
-              title="Heatmap: warm spots show where viewers look first"
-              aria-label="Toggle Heatmap"
-              aria-pressed={showHeatmap}
-              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
-                showHeatmap
-                  ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
-                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
-              }`}
-            >
-              <Flame className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowGazeOrder(!showGazeOrder)}
-              disabled={!result}
-              title="Likely look order: numbered sequence of first eye jumps"
-              aria-label="Toggle Likely Look Order"
-              aria-pressed={showGazeOrder}
-              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
-                showGazeOrder
-                  ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
-                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
-              }`}
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </button>
-
             <button
               type="button"
               onClick={() => {
@@ -516,7 +373,6 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             </button>
           </div>
 
-          {/* Opacity Slider */}
           {result?.squint_png_b64 && (
             <div className="flex items-center">
               <button
@@ -541,31 +397,6 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-1">
-            <span className="text-neutral-400 text-[11px]">Opacity:</span>
-            <div className="w-12">
-              <Slider.Root
-                value={[opacity]}
-                onValueChange={(val) => setOpacity(val[0])}
-                disabled={!result}
-                max={100}
-                min={10}
-                step={5}
-                aria-label="Heatmap opacity"
-                className="relative flex items-center select-none touch-none w-full h-4"
-              >
-                <Slider.Track className="bg-neutral-800 relative grow rounded-full h-1">
-                  <Slider.Range className="absolute bg-teal-500 rounded-full h-full" />
-                </Slider.Track>
-                <Slider.Thumb className="block w-3.5 h-3.5 bg-white rounded-full shadow focus:outline-none focus:ring-1 focus:ring-teal-400" />
-              </Slider.Root>
-            </div>
-            <span className="w-7 text-right font-mono text-[11px] text-neutral-300">
-              {opacity}%
-            </span>
-          </div>
-
-          {/* Drawing & Navigation controls */}
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -625,18 +456,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
 
             <div className="h-4 w-px bg-neutral-800 mx-1" />
 
-            {/* Export buttons with visible text */}
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={!result}
-              title="Download PDF attention report"
-              aria-label="Download report"
-              className="flex h-7 items-center gap-1 rounded bg-teal-700 hover:bg-teal-800 text-white px-2 py-1 text-xs font-medium transition-colors"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Download report</span>
-            </button>
+          </div>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={handleExportPng}
@@ -658,6 +479,199 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               <span>JSON</span>
             </button>
           </div>
+    </div>
+  );
+
+  return (
+    <div className="analyze-screen flex min-h-full w-full flex-col lg:flex-row lg:h-full lg:overflow-hidden">
+      {/* Recents and samples follow results below 1024px. */}
+        <div className={`${showUploader ? '' : 'lg:hidden'} order-last lg:order-none w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-r border-neutral-800 bg-neutral-900/85 p-3.5 overflow-y-auto space-y-3 z-10 shadow-xl`}>
+          <div className="hidden lg:flex items-center justify-end pb-2 border-b border-neutral-800">
+            <button
+              type="button"
+              onClick={() => setShowUploader(false)}
+              className="flex items-center gap-0.5 text-neutral-400 hover:text-neutral-200 text-xs px-1 py-1 rounded hover:bg-neutral-800"
+              aria-label="Hide"
+              title="Hide design input panel"
+              aria-expanded={showUploader}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Hide
+            </button>
+          </div>
+
+          <DesignUploader
+            compact
+            libraryOnly
+            onSelectImage={onSelectImage}
+            onSelectSample={onSelectSample}
+            recentImages={recentImages}
+            onSelectRecent={onSelectRecent}
+            onDeleteRecent={onDeleteRecent}
+            onClearRecent={onClearRecent}
+          />
+
+          <div className="pt-2 border-t border-neutral-800/80">
+            <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
+              Trust and privacy
+            </div>
+            <TrustBadges />
+          </div>
+        </div>
+
+      {/* Center: Interactive Canvas Area */}
+      <div className="relative w-full flex flex-col bg-neutral-950 lg:flex-1 lg:overflow-hidden lg:min-h-0 lg:min-w-0">
+        {/* Dismissible Guided Tutorial Prompt (Desktop >= 1024px) */}
+        {showClientGuideCard && (
+          <div className="hidden lg:flex items-center justify-between bg-neutral-900 border-b border-neutral-800 px-4 py-2 text-xs text-neutral-200 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-teal-400 font-bold">✨ Using Glance for clients?</span>
+              <span className="hidden sm:inline">See the 1-minute guide to get the most from reports.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenClientGuide}
+                className="rounded bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-1 text-xs font-medium transition-colors"
+              >
+                See the 1-minute guide
+              </button>
+              <button
+                type="button"
+                onClick={onDismissClientGuideCard}
+                aria-label="Dismiss client guide suggestion"
+                className="shrink-0 rounded text-neutral-400 hover:text-white p-1 text-xs font-bold"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Canvas Toolbar: measured controls stay on one row. */}
+        <div ref={toolbarRef} role="toolbar" aria-label="Image tools" data-compact={compactToolbar} className="analyze-toolbar shrink-0 border-b border-neutral-800 bg-neutral-900/90 px-2 py-1 text-xs">
+          <div ref={primaryRef} className="analyze-toolbar-primary">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => hiddenFileInputRef.current?.click()}
+              aria-label="Select new image"
+              title="New image"
+              className="flex h-7 items-center gap-1 rounded border border-neutral-700 bg-neutral-800 px-2 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5 text-teal-400" />
+              <span className="analyze-toolbar-label">New image</span>
+            </button>
+            <input
+              ref={hiddenFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onClick={(event) => { event.currentTarget.value = ''; }}
+              onChange={handleFileChange}
+            />
+
+            {!showUploader && (
+              <button
+                type="button"
+                onClick={() => setShowUploader(true)}
+                className="hidden lg:flex h-7 w-7 items-center justify-center rounded border border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors"
+                aria-label="Show design input panel"
+                title="Show design input panel"
+                aria-expanded={showUploader}
+              >
+                <Upload className="h-3.5 w-3.5 text-teal-400" />
+              </button>
+            )}
+
+            <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
+
+            <button
+              type="button"
+              onClick={() => setShowHeatmap(!showHeatmap)}
+              disabled={!result}
+              title="Heatmap: warm spots show where viewers look first"
+              aria-label="Toggle Heatmap"
+              aria-pressed={showHeatmap}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
+                showHeatmap
+                  ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
+                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <Flame className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowGazeOrder(!showGazeOrder)}
+              disabled={!result}
+              title="Likely look order: numbered sequence of first eye jumps"
+              aria-label="Toggle Likely Look Order"
+              aria-pressed={showGazeOrder}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
+                showGazeOrder
+                  ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
+                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-neutral-400 text-[11px]">Opacity:</span>
+            <div className="w-12">
+              <Slider.Root
+                value={[opacity]}
+                onValueChange={(val) => setOpacity(val[0])}
+                disabled={!result}
+                max={100}
+                min={10}
+                step={5}
+                className="relative flex items-center select-none touch-none w-full h-4"
+              >
+                <Slider.Track className="bg-neutral-800 relative grow rounded-full h-1">
+                  <Slider.Range className="absolute bg-teal-500 rounded-full h-full" />
+                </Slider.Track>
+                <Slider.Thumb aria-label="Heatmap opacity" className="block w-3.5 h-3.5 bg-white rounded-full shadow focus:outline-none focus:ring-1 focus:ring-teal-400" />
+              </Slider.Root>
+            </div>
+            <span className="w-7 text-right font-mono text-[11px] text-neutral-300">
+              {opacity}%
+            </span>
+          </div>
+
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={!result}
+              title="Download PDF attention report"
+              aria-label="Download report"
+              className="flex h-7 items-center gap-1 rounded bg-teal-700 hover:bg-teal-800 text-white px-2 py-1 text-xs font-medium transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="analyze-toolbar-label">Download report</span>
+            </button>
+          </div>
+          <div className={collapseToolbar ? 'analyze-toolbar-probe' : ''} aria-hidden={collapseToolbar || undefined}>
+            <div ref={secondaryRef}>{secondaryControls}</div>
+          </div>
+          <Popover.Root open={collapseToolbar && moreOpen} onOpenChange={setMoreOpen}>
+            <div className={collapseToolbar ? '' : 'analyze-toolbar-probe'} aria-hidden={!collapseToolbar || undefined}>
+              <Popover.Trigger asChild>
+                <button ref={moreRef} type="button" aria-label="More image controls" className="flex h-7 items-center gap-1 rounded bg-neutral-800 px-2 text-neutral-300 hover:bg-neutral-700">
+                  <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>More</span>
+                </button>
+              </Popover.Trigger>
+            </div>
+            <Popover.Portal>
+              <Popover.Content aria-label="More image controls" align="end" sideOffset={6} collisionPadding={8} className="analyze-more z-50 w-64 max-w-[calc(100vw-1rem)] rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-xs text-neutral-200 shadow-xl">
+                {secondaryControls}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
 
         {/* Viewport canvas container with optional Scroll Attention Strip for Full-Page mode */}
@@ -767,16 +781,17 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                   />
                 )}
 
-                {/* Heatmap Layer - fades in ~400ms after scan completes */}
-                {result && !isScanning && showHeatmap && !showFog && (
+                {/* Keep layers mounted so toggling them cannot replay the reveal. */}
+                {result && !isScanning && (
                   <HeatmapImage
                     png={result.heatmap_png_b64}
                     colorRamp={colorRamp}
                     alt="Attention Heatmap"
-                    style={{ opacity: opacity / 100, '--heatmap-opacity': opacity / 100 } as React.CSSProperties}
-                    className={`absolute inset-0 h-full w-full object-contain ${
-                      reducedMotion ? '' : 'animate-heatmap-fade'
-                    }`}
+                    data-reveal="heatmap"
+                    style={{ opacity: reveal.elapsed >= 0 ? opacity / 100 : 0,
+                      display: showHeatmap && !showFog ? undefined : 'none',
+                      transition: `opacity ${reveal.reduced || reveal.elapsed >= 600 ? 150 : 600}ms cubic-bezier(0.23, 1, 0.32, 1)` }}
+                    className="absolute inset-0 h-full w-full object-contain"
                     draggable={false}
                     onDragStart={(e) => e.preventDefault()}
                   />
@@ -810,8 +825,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 )}
 
                 {/* Scanpath Layer: Numbered dots 1-7 + connecting lines */}
-                {result && !isScanning && showGazeOrder && (
-                  <svg className="absolute inset-0 h-full w-full pointer-events-none">
+                {result && !isScanning && (
+                  <svg style={{ display: showGazeOrder ? undefined : 'none' }} className="absolute inset-0 h-full w-full pointer-events-none">
                     {/* Connecting lines */}
                     {result.scanpath.map((point, idx) => {
                       if (idx === 0) return null;
@@ -825,10 +840,12 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                           y2={`${point.y}%`}
                           stroke="#f59e0b"
                           strokeWidth="2"
-                          strokeDasharray="4 2"
+                          pathLength="1"
+                          strokeDasharray="1"
                           strokeOpacity="0.85"
-                          className={reducedMotion ? '' : 'animate-line-reveal'}
-                          style={reducedMotion ? undefined : { animationDelay: `${250 + (idx - 1) * 120}ms` }}
+                          data-reveal={`line-${idx}`}
+                          style={{ strokeDashoffset: reveal.elapsed >= (reveal.timing?.lines[idx - 1] ?? Infinity) ? 0 : 1,
+                            transition: `stroke-dashoffset ${reveal.reduced ? 0 : 100}ms linear` }}
                         />
                       );
                     })}
@@ -837,11 +854,9 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                     {result.scanpath.map((point, idx) => (
                       <g
                         key={`point-${point.order}`}
-                        className={reducedMotion ? '' : 'animate-gaze-pop'}
-                        style={reducedMotion ? undefined : {
-                          animationDelay: `${250 + idx * 120}ms`,
-                          transformOrigin: `${point.x}% ${point.y}%`,
-                        }}
+                        data-reveal={`number-${idx + 1}`}
+                        style={{ ...revealStyle(reveal.timing?.numbers[idx] ?? Infinity),
+                          transition: 'opacity 150ms cubic-bezier(0.23, 1, 0.32, 1)' }}
                       >
                         <circle
                           cx={`${point.x}%`}
@@ -918,46 +933,51 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </div>
 
         </div>
-          {imageSrc && (
-            <div role="group" aria-label="Image controls" className="lg:hidden flex items-center gap-2 border-t border-neutral-800 bg-neutral-900 px-3 py-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setShowHeatmap(!showHeatmap)}
-                disabled={!result}
-                aria-pressed={showHeatmap}
-                className={`min-h-[44px] min-w-[44px] rounded px-2 ${showHeatmap ? 'bg-teal-950 text-teal-300' : 'bg-neutral-800 text-neutral-400'}`}
-              >
-                Heatmap
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowGazeOrder(!showGazeOrder)}
-                disabled={!result}
-                aria-pressed={showGazeOrder}
-                className={`min-h-[44px] min-w-[44px] rounded px-2 ${showGazeOrder ? 'bg-teal-950 text-teal-300' : 'bg-neutral-800 text-neutral-400'}`}
-              >
-                Look order
-              </button>
-              <label className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-neutral-300">
-                Opacity
-                <input type="range" aria-label="Heatmap opacity" min={10} max={100} step={5} value={opacity} disabled={!result} onChange={event => setOpacity(Number(event.target.value))} className="h-11 min-w-[44px] w-full accent-teal-500" />
-              </label>
+        {/* Dismissible Hint Bar under Canvas (Desktop >= 1024px) */}
+        {showHintBar && (
+          <div className="hidden lg:flex items-center justify-between bg-teal-950/90 border-t border-teal-800/70 px-4 py-2.5 text-xs text-teal-200 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-teal-300">Quick tip:</span>
+              <span>Pick a sample or add your design. Results stay on your device.</span>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={onDismissHint}
+              aria-label="Dismiss hint"
+              className="shrink-0 rounded text-teal-300 hover:text-white p-1 ml-4 text-xs font-bold"
+            >
+              Got it
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* Right: Metrics Side Panel */}
       <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-neutral-800 bg-neutral-900/70 p-4 lg:overflow-y-auto space-y-4">
         {!result && <p className="text-xs text-neutral-400">Results appear after you add an image.</p>}
+        {result && (
+          <div className="h-4 text-xs text-neutral-400" role="status" data-reveal="reading" style={{ visibility: reveal.elapsed >= (reveal.timing?.pause ?? Infinity) && reveal.elapsed < typingAt ? 'visible' : 'hidden' }}>
+            <span className="analyze-reading-dot mr-2 inline-block h-1.5 w-1.5 rounded-full bg-teal-400" aria-hidden="true" />
+            Reading the results…
+          </div>
+        )}
 
         {/* What to look at line + Next Actions (Brief A-3 Item 4) */}
         {result && (
-          <div className="rounded-xl border border-teal-800/60 bg-teal-950/30 p-3.5 space-y-2.5">
+          <div data-reveal="summary" style={revealStyle(typingAt)} className="rounded-xl border border-teal-800/60 bg-teal-950/30 p-3.5 space-y-2.5">
             <div className="text-xs font-semibold text-teal-300 flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-teal-400" />
               <span>What to look at first</span>
             </div>
-            <p className="text-xs text-neutral-200 leading-relaxed">{buildAnalyzeSummary(result, aois)}</p>
+            <p className="relative text-xs text-neutral-200 leading-relaxed" onClick={reveal.skipTyping}
+              role={visibleWords < words.length ? 'button' : undefined} tabIndex={visibleWords < words.length ? 0 : undefined}
+              aria-label={visibleWords < words.length ? 'Show full summary' : undefined}
+              onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); reveal.skipTyping(); } }}>
+              <span className="invisible" aria-hidden="true">{summary}</span>
+              <span className="absolute inset-0" aria-hidden="true" data-reveal="summary-text">{words.slice(0, visibleWords).join(' ')}</span>
+              <span className="sr-only">{summary}</span>
+            </p>
             <div className="pt-2 border-t border-teal-800/40 flex flex-wrap gap-1.5 text-xs">
               {onNavigate && (
                 <button
@@ -989,6 +1009,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
         )}
 
         {result && <>
+        <div className="space-y-4" style={{ visibility: reveal.elapsed >= cardAt(0) ? 'visible' : 'hidden' }}>
         <div className="hidden lg:flex items-center justify-between border-b border-neutral-800 pb-2">
           <h3 className="font-semibold text-neutral-100 text-sm">Attention Metrics</h3>
           <span className="text-[10px] font-mono text-teal-400 bg-teal-950 px-1.5 py-0.5 rounded border border-teal-800/40">
@@ -1015,16 +1036,17 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             onSelectSlice={handleSelectSlice}
           />
         )}
+        </div>
 
         {/* 1. Clarity Score */}
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
+        <div data-reveal="card-clarity" style={revealStyle(cardAt(0), true)} className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-medium text-neutral-300 block">Visual Clarity</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="font-mono text-lg font-bold text-teal-400">
-                {displayClarity !== null ? displayClarity.toFixed(1) : (result?.metrics.clarity.toFixed(1) ?? '--')}
+                {result.metrics.clarity.toFixed(1)}
               </span>
               <MetricsInfoPopover
                 title="Visual Clarity Score"
@@ -1041,7 +1063,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
         </div>
 
         {/* 2. Marked Areas (Check a part) */}
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2.5">
+        <div data-reveal="card-areas" style={revealStyle(cardAt(1), true)} className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Percent className="h-3.5 w-3.5 text-teal-400" />
@@ -1121,7 +1143,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
         </div>
 
         {/* 3. Likely Look Order */}
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
+        <div data-reveal="card-look-order" style={revealStyle(cardAt(2), true)} className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Crosshair className="h-3.5 w-3.5 text-teal-400" />
@@ -1152,7 +1174,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
         </div>
 
         {/* 4. Advanced (for researchers) - Collapsed by default (Brief A-3 Item 2) */}
-        <details className="group rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
+        <details data-reveal="card-advanced" style={revealStyle(cardAt(3), true)} className="group rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
           <summary className="cursor-pointer text-xs font-medium text-neutral-400 hover:text-neutral-200 flex items-center justify-between select-none">
             <span>Advanced (for researchers)</span>
             <ChevronDown className="h-3.5 w-3.5 text-neutral-500 group-open:rotate-180 transition-transform" />

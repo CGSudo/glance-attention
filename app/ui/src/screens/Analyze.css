@@ -1,0 +1,44 @@
+.analyze-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.analyze-toolbar-primary,
+.analyze-toolbar-secondary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  flex-shrink: 0;
+}
+
+.analyze-toolbar-primary { justify-content: space-between; flex: 1; }
+.analyze-toolbar-primary > * { flex-shrink: 0; }
+.analyze-toolbar[data-compact='true'] .analyze-toolbar-label { display: none; }
+.analyze-toolbar[data-compact='true'] .analyze-toolbar-primary { gap: 2px; }
+.analyze-toolbar[data-compact='true'] .analyze-toolbar-primary > button { padding-inline: 6px; }
+.analyze-toolbar-probe { width: 0; height: 0; overflow: hidden; flex-shrink: 0; visibility: hidden; }
+.analyze-more .analyze-toolbar-secondary { width: auto; flex-wrap: wrap; gap: 8px; }
+.analyze-more button { min-height: 40px; min-width: 40px; }
+.analyze-more .analyze-toolbar-secondary > div { flex-wrap: wrap; max-width: 100%; }
+
+@keyframes analyze-reading-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+.analyze-reading-dot { animation: analyze-reading-pulse 1000ms ease-in-out infinite; }
+
+html.reduced-motion .analyze-screen [data-reveal]:not([data-reveal^='line-']) {
+  transition-duration: 150ms !important;
+}
+
+@media (max-width: 1023px) {
+  .analyze-toolbar button { min-height: 44px; min-width: 40px; }
+  .analyze-toolbar [role='slider']::after { content: ''; position: absolute; inset: -15px -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analyze-reading-dot { animation: none; }
+}
