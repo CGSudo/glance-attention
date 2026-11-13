@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Server, Palette, Sun, Moon, Check, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Server, Palette, Check, RefreshCw } from 'lucide-react';
 import { isMockMode, isTauri, isWeb, setTransport, HttpTransport, MockTransport, TauriTransport, SystemInfo } from '../api';
 import { ColorRampType } from '../utils/colorRamps';
 
 interface SettingsProps {
   colorRamp: ColorRampType;
   onChangeColorRamp: (ramp: ColorRampType) => void;
-  isDark: boolean;
-  onToggleTheme: () => void;
   reducedMotion: boolean;
   onToggleReducedMotion: () => void;
   onResetOnboarding: () => void;
@@ -18,8 +16,6 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({
   colorRamp,
   onChangeColorRamp,
-  isDark,
-  onToggleTheme,
   reducedMotion,
   onToggleReducedMotion,
   onResetOnboarding,
@@ -191,16 +187,9 @@ export const Settings: React.FC<SettingsProps> = ({
             <div>
               <div className="text-xs font-medium text-neutral-200">Theme Mode</div>
               <div className="text-[11px] text-neutral-400">
-                Current: {isDark ? 'Dark (Calm Gray)' : 'Light (Clean Paper)'}
+                Current: Dark (Calm Gray)
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="rounded-md bg-neutral-800 hover:bg-neutral-700 p-2 text-neutral-200 transition-colors"
-            >
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-950 border border-neutral-800">

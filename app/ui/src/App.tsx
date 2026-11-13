@@ -36,7 +36,7 @@ const VALID_SCREENS: ScreenId[] = [
 ];
 
 export const App: React.FC = () => {
-  // First load: default to analyze screen where default sample is analysed
+  // First load: default to the Analyze screen.
   const initialHash = typeof window !== 'undefined' ? (window.location.hash.replace('#', '') as ScreenId) : 'analyze';
   const [currentScreen, setCurrentScreen] = useState<ScreenId>(VALID_SCREENS.includes(initialHash) ? initialHash : 'analyze');
 
@@ -47,14 +47,21 @@ export const App: React.FC = () => {
   const [contentType, setContentType] = useState<ContentType>('natural');
   const [installing, setInstalling] = useState<Record<string, InstallProgress>>({});
   const [modelError, setModelError] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState<boolean>(true);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(false);
-  const [colorRamp, setColorRamp] = useState<ColorRampType>('inferno');
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('glance_reduced_motion');
+      if (stored !== null) return stored === 'true';
+    } catch { /* Use the OS preference when storage is unavailable. */ }
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+  const [colorRamp, setColorRamp] = useState<ColorRampType>(() => {
+    try { return localStorage.getItem('glance_color_ramp') === 'viridis' ? 'viridis' : 'inferno'; }
+    catch { return 'inferno'; }
+  });
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [showHintBar, setShowHintBar] = useState<boolean>(false);
   const [showClientGuideCard, setShowClientGuideCard] = useState<boolean>(false);
   const [isClientGuideModalOpen, setIsClientGuideModalOpen] = useState<boolean>(false);
-  const initialSampleLoaded = useRef<boolean>(false);
 
   // Analysis State
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -122,17 +129,19 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [refreshModels]);
 
-  // Sync theme to document element
+  // Dark is the only supported theme; discard any previously stored light choice.
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
+    document.documentElement.classList.add('dark');
+    try { localStorage.setItem('glance_theme', 'dark'); } catch { /* Storage may be disabled. */ }
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem('glance_color_ramp', colorRamp); } catch { /* Storage may be disabled. */ }
+  }, [colorRamp]);
 
   // Sync reduced motion
   useEffect(() => {
+    try { localStorage.setItem('glance_reduced_motion', String(reducedMotion)); } catch { /* Storage may be disabled. */ }
     if (reducedMotion) {
       document.documentElement.classList.add('reduced-motion');
     } else {
@@ -334,23 +343,6 @@ export const App: React.FC = () => {
     setAois([]);
   };
 
-  // First load: auto-generate default sample in Analyze so it is already analysed
-  useEffect(() => {
-    if (currentScreen === 'analyze' && !imageSrc && !initialSampleLoaded.current) {
-      initialSampleLoaded.current = true;
-      createSampleImageBlob('hero').then((file) => {
-        setImageFile(file);
-        setImageSrc(URL.createObjectURL(file));
-        const initialAois: Aoi[] = [
-          { id: 'cta-btn', name: 'Primary CTA Button', x: 4.5, y: 51.5, width: 23, height: 9, color: '#14b8a6' },
-          { id: 'hero-headline', name: 'Hero Headline', x: 4.5, y: 24, width: 44, height: 14, color: '#f59e0b' },
-        ];
-        setAois(initialAois);
-        executeAnalysis(file, activeModelId, initialAois, contentType, true);
-      });
-    }
-  }, [currentScreen, imageSrc, activeModelId, executeAnalysis, contentType]);
-
   return (
     <Layout
       currentScreen={currentScreen}
@@ -358,8 +350,6 @@ export const App: React.FC = () => {
       models={models}
       activeModelId={activeModelId}
       onSelectModel={handleSelectModel}
-      isDark={isDark}
-      onToggleTheme={() => setIsDark(!isDark)}
       onOpenHelp={() => setIsOnboardingOpen(true)}
       systemInfo={systemInfo}
       contentType={contentType}
@@ -404,6 +394,7 @@ export const App: React.FC = () => {
           onClearRecent={handleClearRecents}
           isScanning={isScanning}
           reducedMotion={reducedMotion}
+          colorRamp={colorRamp}
           onRemoveImage={handleRemoveImage}
           onNavigate={handleNavigate}
           showHintBar={showHintBar}
@@ -420,7 +411,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {currentScreen === 'compare' && <Compare activeModelId={activeModelId} contentType={contentType} />}
+      {currentScreen === 'compare' && <Compare activeModelId={activeModelId} contentType={contentType} colorRamp={colorRamp} />}
 
       {currentScreen === 'video' && !isWeb && <Video />}
       {isWeb && (currentScreen === 'video' || currentScreen === 'batch') && <p className="p-6"><a className="text-teal-300 underline" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a></p>}
@@ -439,14 +430,12 @@ export const App: React.FC = () => {
 
       {currentScreen === 'batch' && !isWeb && <Batch activeModelId={activeModelId} contentType={contentType} />}
 
-      {currentScreen === 'learn' && <Learn />}
+      {currentScreen === 'learn' && <Learn reducedMotion={reducedMotion} />}
 
       {currentScreen === 'settings' && (
         <Settings
           colorRamp={colorRamp}
           onChangeColorRamp={setColorRamp}
-          isDark={isDark}
-          onToggleTheme={() => setIsDark(!isDark)}
           reducedMotion={reducedMotion}
           onToggleReducedMotion={() => setReducedMotion(!reducedMotion)}
           onResetOnboarding={() => setIsOnboardingOpen(true)}

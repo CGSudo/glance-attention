@@ -85,7 +85,7 @@
     opacity: 0;
   }
   to {
-    opacity: 0.7;
+    opacity: var(--heatmap-opacity, 0.7);
   }
 }
 

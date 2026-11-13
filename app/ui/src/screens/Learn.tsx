@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GraduationCap, ArrowRight, ArrowLeft, AlertTriangle, ExternalLink, BookOpen, ShieldCheck } from 'lucide-react';
 import { WalkthroughGuide } from '../components/WalkthroughGuide';
 
-export const Learn: React.FC = () => {
+export const Learn: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion }) => {
   const [activeStep, setActiveStep] = useState(1);
 
   const RESEARCH_PAPERS = [
@@ -222,7 +222,7 @@ export const Learn: React.FC = () => {
       </div>
 
       {/* Walkthrough Guide: "How Glance judges a design" (Brief A-3 Item 14) */}
-      <WalkthroughGuide />
+      <WalkthroughGuide reducedMotion={reducedMotion} />
 
       {/* Stepper Tabs */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2 overflow-x-auto">

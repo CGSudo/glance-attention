@@ -61,3 +61,14 @@ export function buildColorLookupTable(ramp: ColorRampType): Uint8ClampedArray {
   }
   return lut;
 }
+
+export function recolorHeatmap(pixels: Uint8ClampedArray, ramp: ColorRampType): void {
+  const lut = buildColorLookupTable(ramp);
+  // Core heatmap PNG alpha stores normalized attention; preserve it in either palette.
+  for (let i = 0; i < pixels.length; i += 4) {
+    const offset = pixels[i + 3] * 4;
+    pixels[i] = lut[offset];
+    pixels[i + 1] = lut[offset + 1];
+    pixels[i + 2] = lut[offset + 2];
+  }
+}

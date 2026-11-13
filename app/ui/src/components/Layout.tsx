@@ -12,8 +12,6 @@ import {
   Layers,
   GraduationCap,
   Settings,
-  Sun,
-  Moon,
   HelpCircle,
   Menu,
   X,
@@ -35,8 +33,6 @@ interface LayoutProps {
   models: ModelInfo[];
   activeModelId: string;
   onSelectModel: (id: string) => void;
-  isDark: boolean;
-  onToggleTheme: () => void;
   onOpenHelp: () => void;
   children: React.ReactNode;
   systemInfo: SystemInfo | null;
@@ -61,8 +57,6 @@ export const Layout: React.FC<LayoutProps> = ({
   models,
   activeModelId,
   onSelectModel,
-  isDark,
-  onToggleTheme,
   onOpenHelp,
   children,
   systemInfo,
@@ -114,8 +108,8 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
 
-        {/* Center: Navigation Tabs (Desktop >= 768px) */}
-        <nav className="hidden md:flex items-center space-x-1" aria-label="Main Navigation">
+        {/* Center: Navigation Tabs (Desktop >= 1024px) */}
+        <nav className="hidden lg:flex items-center space-x-1" aria-label="Main Navigation">
           {NAV_ITEMS.filter(item => !isWeb || (item.id !== 'video' && item.id !== 'batch')).map((item) => {
             const Icon = item.icon;
             const isActive = currentScreen === item.id;
@@ -137,8 +131,8 @@ export const Layout: React.FC<LayoutProps> = ({
           })}
         </nav>
 
-        {/* Right: Quick Controls (Desktop >= 768px) */}
-        <div className="hidden md:flex items-center gap-2">
+        {/* Right: Quick Controls (Desktop >= 1024px) */}
+        <div className="hidden lg:flex items-center gap-2">
           <button
             type="button"
             onClick={onOpenHelp}
@@ -147,31 +141,22 @@ export const Layout: React.FC<LayoutProps> = ({
           >
             <HelpCircle className="h-4 w-4" />
           </button>
-
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            aria-label="Toggle Theme (Light / Dark)"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-colors"
-          >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
         </div>
 
-        {/* Mobile Menu Button (< 768px) */}
+        {/* Mobile Menu Button (< 1024px) */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
           aria-label="Open navigation menu"
           aria-expanded={mobileMenuOpen}
-          className="flex md:hidden items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors shrink-0 min-h-[36px]"
+          className="flex lg:hidden items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors shrink-0 min-h-[36px]"
         >
           <Menu className="h-4 w-4 text-teal-400" />
           <span>Menu</span>
         </button>
       </header>
 
-      {/* Mobile Navigation Sheet (< 768px) */}
+      {/* Mobile Navigation Sheet (< 1024px) */}
       <Dialog.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs animate-fade" />
@@ -226,21 +211,13 @@ export const Layout: React.FC<LayoutProps> = ({
               </nav>
             </div>
 
-            {/* Quick controls in sheet footer: Theme + Help */}
+            {/* Quick controls in sheet footer: Help */}
             <div className="pt-4 border-t border-neutral-800 space-y-2">
               <div className="flex items-center justify-between text-xs text-neutral-400 px-1 pb-1">
                 <span>Preferences</span>
                 <span className="font-mono text-[10px] text-teal-400">v0.1.0</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onToggleTheme()}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors min-h-[44px]"
-                >
-                  {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-teal-400" />}
-                  <span>{isDark ? 'Light' : 'Dark'}</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => {

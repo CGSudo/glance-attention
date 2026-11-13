@@ -14,23 +14,27 @@ test('WalkthroughGuide has no unsourced social proof and marks clarity value as 
   assert.ok(walkthroughSource.includes('74 / 100 (example)'), 'Visual clarity value should be marked as example');
 });
 
-test('Layout includes mobile Menu button and navigation sheet below 768px', () => {
+test('Layout includes mobile Menu button and navigation sheet below 1024px', () => {
   const layoutSource = fs.readFileSync(path.join(srcDir, 'components/Layout.tsx'), 'utf-8');
   assert.ok(layoutSource.includes('Menu'), 'Should contain Menu label');
   assert.ok(layoutSource.includes('mobileMenuOpen'), 'Should manage mobile menu state');
   assert.ok(layoutSource.includes('Dialog.Root'), 'Should open nav in a sheet');
-  assert.ok(layoutSource.includes('md:hidden'), 'Menu button should be md:hidden');
-  assert.ok(layoutSource.includes('hidden md:flex'), 'Desktop nav should be hidden md:flex');
+  assert.ok(layoutSource.includes('lg:hidden'), 'Menu button should be lg:hidden');
+  assert.ok(layoutSource.includes('hidden lg:flex'), 'Desktop nav should be hidden lg:flex');
 });
 
-test('Analyze provides compact uploader bar and proper ordering on mobile < 768px', () => {
+test('Analyze provides compact uploader bar and proper ordering below 1024px', () => {
   const analyzeSource = fs.readFileSync(path.join(srcDir, 'screens/Analyze.tsx'), 'utf-8');
   assert.ok(analyzeSource.includes('Mobile Compact Uploader Bar'), 'Should have mobile compact uploader bar');
-  assert.ok(analyzeSource.includes('hidden md:block w-72 lg:w-80'), 'Docked uploader panel should be hidden on mobile');
+  assert.ok(analyzeSource.includes('order-last lg:order-none w-full lg:w-80'), 'Recents and samples follow results below 1024px');
   assert.ok(analyzeSource.includes('SAMPLES.map'), 'Compact uploader bar should map samples');
   assert.ok(analyzeSource.includes('overflow-x-auto'), 'Samples should be a horizontal scroll row');
-  assert.ok(analyzeSource.includes('hidden md:flex flex-wrap items-center justify-between border-b'), 'Canvas toolbar hidden below 768px');
-  assert.ok(analyzeSource.includes('relative w-full flex flex-col bg-neutral-950 md:flex-1'), 'Canvas container uses normal document flow on mobile');
+  const toolbarSource = analyzeSource.split('Canvas Toolbar (Desktop >= 1024px)')[1].split('Viewport canvas container')[0];
+  assert.ok(toolbarSource.includes('hidden lg:flex items-center justify-between'), 'Canvas toolbar hidden below 1024px');
+  assert.equal(toolbarSource.includes('flex-wrap'), false, 'Desktop toolbar stays on one row');
+  assert.equal(toolbarSource.includes('min-h-[44px]'), false, 'Desktop toolbar uses compact controls');
+  assert.equal((analyzeSource.match(/aria-label="Remove image"/g) || []).length, 1, 'One image removal control');
+  assert.ok(analyzeSource.includes('relative w-full flex flex-col bg-neutral-950 lg:flex-1'), 'Canvas container uses normal document flow below 1024px');
   assert.equal(analyzeSource.includes('-mt-'), false, 'No negative margins');
   assert.equal(analyzeSource.includes('fixed md:static'), false, 'No fixed metrics panel on mobile');
 });

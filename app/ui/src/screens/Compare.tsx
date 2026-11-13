@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GitCompare, Flame, CloudFog, Percent, RefreshCw } from 'lucide-react';
-import { Aoi, CompareResult, ContentType } from '../api/types';
+import { GitCompare, Flame, CloudFog, RefreshCw } from 'lucide-react';
+import { CompareResult, ContentType } from '../api/types';
 import { getTransport, pngDataUrl } from '../api';
 import { MetricsInfoPopover } from '../components/MetricsInfoPopover';
 import { DesignUploader } from '../components/DesignUploader';
@@ -12,13 +12,17 @@ import {
   clearAllRecentImages,
 } from '../utils/recentImages';
 import { createSampleImageBlob, SampleType } from '../utils/samples';
+import { clarityVerdict } from '../utils/compareVerdict';
+import { HeatmapImage } from '../components/HeatmapImage';
+import { ColorRampType } from '../utils/colorRamps';
 
 interface CompareProps {
   activeModelId: string;
   contentType: ContentType;
+  colorRamp: ColorRampType;
 }
 
-export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) => {
+export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType, colorRamp }) => {
   const [fileA, setFileA] = useState<File | null>(null);
   const [fileB, setFileB] = useState<File | null>(null);
   const [srcA, setSrcA] = useState<string>('');
@@ -46,11 +50,8 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
       setIsLoading(true);
       setError(null);
       try {
-        const sampleAois: Aoi[] = [
-          { id: 'cta-primary', name: 'Primary CTA', x: 20, y: 35, width: 25, height: 15, color: '#14b8a6' },
-        ];
         const transport = getTransport();
-        const res = await transport.compare(fA, fB, activeModelId, sampleAois, contentType);
+        const res = await transport.compare(fA, fB, activeModelId, [], contentType);
         setResult(res);
       } catch (err) {
         setError(String(err));
@@ -126,7 +127,7 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
   const loadPresetComparison = useCallback(async () => {
     const [presetA, presetB] = await Promise.all([
       createSampleImageBlob('hero'),
-      createSampleImageBlob('product'),
+      createSampleImageBlob('hero-variant'),
     ]);
 
     setFileA(presetA);
@@ -235,20 +236,6 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSrcA('');
-                      setFileA(null);
-                      setResult(null);
-                      setIsReplacingA(false);
-                    }}
-                    aria-label="Remove Variant A image"
-                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-red-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
-                  >
-                    <span className="font-bold text-xs leading-none">✕</span>
-                    <span>Remove</span>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setIsReplacingA(!isReplacingA)}
                     aria-label="New image for Variant A"
                     className="flex items-center gap-1 text-xs text-neutral-300 hover:text-teal-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
@@ -285,8 +272,9 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                 onDragStart={(e) => e.preventDefault()}
               />
               {result && activeLayer === 'heatmap' && (
-                <img
-                  src={pngDataUrl(result.a.heatmap_png_b64)}
+                <HeatmapImage
+                  png={result.a.heatmap_png_b64}
+                  colorRamp={colorRamp}
                   alt="Variant A Heatmap"
                   style={{ opacity: 0.7 }}
                   className="absolute inset-0 h-full w-full object-contain pointer-events-none"
@@ -294,6 +282,20 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                   onDragStart={(e) => e.preventDefault()}
                 />
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSrcA('');
+                  setFileA(null);
+                  setResult(null);
+                  setIsReplacingA(false);
+                }}
+                aria-label="Remove image"
+                title="Remove image"
+                className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-600 bg-neutral-900/95 text-sm text-white shadow hover:bg-red-950 hover:border-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
             </div>
           )}
         </div>
@@ -317,20 +319,6 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
               )}
               {srcB && (
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSrcB('');
-                      setFileB(null);
-                      setResult(null);
-                      setIsReplacingB(false);
-                    }}
-                    aria-label="Remove Variant B image"
-                    className="flex items-center gap-1 text-xs text-neutral-300 hover:text-red-300 rounded px-2 py-1 border border-neutral-700 bg-neutral-800 min-h-[44px]"
-                  >
-                    <span className="font-bold text-xs leading-none">✕</span>
-                    <span>Remove</span>
-                  </button>
                   <button
                     type="button"
                     onClick={() => setIsReplacingB(!isReplacingB)}
@@ -369,8 +357,9 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                 onDragStart={(e) => e.preventDefault()}
               />
               {result && activeLayer === 'heatmap' && (
-                <img
-                  src={pngDataUrl(result.b.heatmap_png_b64)}
+                <HeatmapImage
+                  png={result.b.heatmap_png_b64}
+                  colorRamp={colorRamp}
                   alt="Variant B Heatmap"
                   style={{ opacity: 0.7 }}
                   className="absolute inset-0 h-full w-full object-contain pointer-events-none"
@@ -378,6 +367,20 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                   onDragStart={(e) => e.preventDefault()}
                 />
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSrcB('');
+                  setFileB(null);
+                  setResult(null);
+                  setIsReplacingB(false);
+                }}
+                aria-label="Remove image"
+                title="Remove image"
+                className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-600 bg-neutral-900/95 text-sm text-white shadow hover:bg-red-950 hover:border-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
             </div>
           )}
         </div>
@@ -393,34 +396,29 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
             <h3 className="font-semibold text-sm text-neutral-100">Comparison Analytics</h3>
-            <span className="text-[11px] text-neutral-400 font-mono">
-              Correlation Coefficient CC: {result.cc.toFixed(3)}
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Clarity Delta */}
             <div className="rounded-lg bg-neutral-950 p-3 border border-neutral-800 space-y-1">
               <div className="flex items-center justify-between text-xs text-neutral-400">
-                <span>Clarity Delta (A vs B)</span>
+                <span>Clarity Delta (B − A)</span>
                 <MetricsInfoPopover
                   title="Clarity Delta"
-                  formula="Clarity(A) - Clarity(B)"
+                  formula="Clarity(B) - Clarity(A)"
                   source="Comparative entropy analysis."
-                  explanation="Positive value indicates Variant A has a more concentrated visual focus; negative value indicates Variant B is more focused."
+                  explanation="Positive means Variant B has more concentrated attention; negative means Variant A. Zero means equal clarity."
                 />
               </div>
               <div
                 className={`text-xl font-bold font-mono ${
-                  result.delta.clarity >= 0 ? 'text-teal-400' : 'text-amber-400'
+                  result.delta.clarity > 0 ? 'text-amber-400' : result.delta.clarity < 0 ? 'text-teal-400' : 'text-neutral-200'
                 }`}
               >
-                {result.delta.clarity >= 0 ? `+${result.delta.clarity}` : result.delta.clarity}
+                {result.delta.clarity >= 0 ? '+' : ''}{result.delta.clarity.toFixed(1)} points
               </div>
               <p className="text-[10px] text-neutral-400">
-                {result.delta.clarity > 0
-                  ? 'Variant A has cleaner hierarchy'
-                  : 'Variant B has cleaner hierarchy'}
+                {clarityVerdict(result.delta.clarity)}
               </p>
             </div>
 
@@ -436,7 +434,7 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
                 />
               </div>
               <div className="text-xl font-bold font-mono text-neutral-200">
-                {result.cc.toFixed(3)}
+                {result.cc.toFixed(2)}
               </div>
               <p className="text-[10px] text-neutral-400">
                 {result.cc > 0.8
@@ -447,23 +445,6 @@ export const Compare: React.FC<CompareProps> = ({ activeModelId, contentType }) 
               </p>
             </div>
 
-            {/* Top AOI Share Shift */}
-            <div className="rounded-lg bg-neutral-950 p-3 border border-neutral-800 space-y-1">
-              <div className="flex items-center justify-between text-xs text-neutral-400">
-                <div className="flex items-center gap-1">
-                  <Percent className="h-3 w-3 text-teal-400" />
-                  <span>Primary CTA Share</span>
-                </div>
-              </div>
-              <div className="text-xl font-bold font-mono text-neutral-200">
-                {result.delta.aoi_share[0]?.delta !== undefined
-                  ? `${result.delta.aoi_share[0].delta >= 0 ? '+' : ''}${result.delta.aoi_share[0].delta.toFixed(1)}%`
-                  : 'N/A'}
-              </div>
-              <p className="text-[10px] text-neutral-400">
-                Attention shift on primary action element
-              </p>
-            </div>
           </div>
         </div>
       ) : (

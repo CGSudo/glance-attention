@@ -65,12 +65,21 @@ const STEPS: WalkthroughStep[] = [
   },
 ];
 
-export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotion = false }) => {
+export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotion: appReducedMotion = false }) => {
+  const [osReducedMotion, setOsReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const reducedMotion = appReducedMotion || osReducedMotion;
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(!reducedMotion);
   const timerRef = useRef<number | null>(null);
 
   const step = STEPS[currentStepIndex];
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setOsReducedMotion(preference.matches);
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -79,7 +88,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
   }, [reducedMotion]);
 
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || reducedMotion) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -91,7 +100,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, reducedMotion]);
 
   const handleNext = () => {
     setIsPlaying(false);
@@ -128,7 +137,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
 
         {/* Walkthrough Controls */}
         <div className="flex items-center gap-1.5 self-start sm:self-auto">
-          <button
+          {!reducedMotion && <button
             type="button"
             onClick={() => setIsPlaying((p) => !p)}
             aria-label={isPlaying ? 'Pause walkthrough' : 'Play walkthrough'}
@@ -145,7 +154,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
                 <span>Play</span>
               </>
             )}
-          </button>
+          </button>}
 
           <button
             type="button"

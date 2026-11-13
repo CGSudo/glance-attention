@@ -16,20 +16,23 @@ import {
   Upload,
   Sparkles,
   ChevronDown,
+  ChevronLeft,
 } from 'lucide-react';
 import { Aoi, AnalyzeResult, ModelInfo } from '../api/types';
 import { ScreenId } from '../components/Layout';
 import { MetricsInfoPopover } from '../components/MetricsInfoPopover';
-import { ModelSwitcher } from '../components/ModelSwitcher';
 import { TrustBadges } from '../components/TrustBadges';
 import { LaserScanOverlay } from '../components/LaserScanOverlay';
-import { DesignUploader } from '../components/DesignUploader';
+import { DesignUploader, useDesignUpload } from '../components/DesignUploader';
 import { ScrollAttentionStrip } from '../components/ScrollAttentionStrip';
 import { FullPageAnalysisResult } from '../utils/fullPageAnalysis';
 import { StoredRecentImage } from '../utils/recentImages';
 import { SAMPLES, SampleType } from '../utils/samples';
 import { pngDataUrl } from '../api';
 import { saveFile } from '../utils/saveFile';
+import { buildAnalyzeSummary } from '../utils/analyzeSummary';
+import { HeatmapImage } from '../components/HeatmapImage';
+import { ColorRampType } from '../utils/colorRamps';
 
 interface AnalyzeProps {
   imageFile: File | null;
@@ -56,6 +59,7 @@ interface AnalyzeProps {
   // Laser scan
   isScanning: boolean;
   reducedMotion: boolean;
+  colorRamp: ColorRampType;
   // Navigation & Reset (Brief A-3)
   onRemoveImage?: () => void;
   onNavigate?: (screen: ScreenId) => void;
@@ -64,33 +68,6 @@ interface AnalyzeProps {
   showClientGuideCard?: boolean;
   onOpenClientGuide?: () => void;
   onDismissClientGuideCard?: () => void;
-}
-
-function getTopLookedAtAreas(res: AnalyzeResult | null, markedAois: Aoi[]): string[] {
-  if (!res || !res.scanpath || res.scanpath.length === 0) return [];
-  const topPoints = res.scanpath.slice(0, 3);
-  return topPoints.map((point) => {
-    const matching = markedAois.find(
-      (a) =>
-        point.x >= a.x &&
-        point.x <= a.x + a.width &&
-        point.y >= a.y &&
-        point.y <= a.y + a.height
-    );
-    if (matching) return matching.name;
-    if (point.y < 35) {
-      if (point.x < 35) return 'Top-left (header / logo)';
-      if (point.x > 65) return 'Top-right (navigation)';
-      return 'Top-center (headline)';
-    }
-    if (point.y <= 65) {
-      if (point.x < 35) return 'Left side (hero text / image)';
-      if (point.x > 65) return 'Right side (panel / product)';
-      return 'Center area (main visual)';
-    }
-    if (point.x < 50) return 'Lower-left section';
-    return 'Lower-right (call-to-action / footer)';
-  });
 }
 
 export const Analyze: React.FC<AnalyzeProps> = ({
@@ -103,9 +80,6 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   aois,
   onUpdateAois,
   onReanalyze,
-  models,
-  activeModelId,
-  onSelectModel,
   onSelectImage,
   onSelectSample,
   recentImages,
@@ -114,6 +88,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   onClearRecent,
   isScanning,
   reducedMotion,
+  colorRamp,
   onRemoveImage,
   onNavigate,
   showHintBar,
@@ -134,7 +109,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
   const [showUploader, setShowUploader] = useState(true);
 
   // Hidden file input for "New image"
-  const hiddenFileInputRef = useRef<HTMLInputElement>(null);
+  const { fileInputRef: hiddenFileInputRef, isDragging, handleDragOver, handleDragLeave, handleDrop, handleFileChange } = useDesignUpload(onSelectImage);
 
   // Full-page active fold state
   const [activeSliceIndex, setActiveSliceIndex] = useState<number | undefined>(undefined);
@@ -193,6 +168,9 @@ export const Analyze: React.FC<AnalyzeProps> = ({
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setActiveSliceIndex(undefined);
+    setIsDrawingAoi(false);
+    setDrawStart(null);
+    setDrawCurrent(null);
   }, [imageSrc]);
 
   // Handle pan - only when zoomed in (Brief A-3 item 9)
@@ -294,7 +272,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
     if (!fullPageResult) return;
     setActiveSliceIndex(sliceIndex);
     const targetSlice = fullPageResult.slices.find((s) => s.index === sliceIndex);
-    if (targetSlice && imageRef.current) {
+    if (targetSlice && imageRef.current && zoom > 1.05) {
       const totalH = fullPageResult.originalHeight;
       const targetRatio = targetSlice.y / totalH;
       const renderedH = imageRef.current.clientHeight || 600;
@@ -333,68 +311,27 @@ export const Analyze: React.FC<AnalyzeProps> = ({
     await exportAnalysisPdf(result, imageSrc, aois);
   };
 
-  if (!imageSrc) {
-    return (
-      <div className="flex flex-col h-full w-full bg-neutral-950 overflow-y-auto">
-        {showHintBar && (
-          <div className="flex items-center justify-between bg-teal-950/90 border-b border-teal-800/70 px-4 py-2.5 text-xs text-teal-200 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-teal-300">Quick tip:</span>
-              <span>Pick a sample or add your design. Results stay on your device.</span>
-            </div>
-            <button
-              type="button"
-              onClick={onDismissHint}
-              aria-label="Dismiss hint"
-              className="rounded text-teal-300 hover:text-white p-1 ml-4 text-xs font-bold"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="max-w-xl w-full p-6 rounded-xl border border-neutral-800 bg-neutral-900/60 space-y-4">
-            <DesignUploader
-              onSelectImage={onSelectImage}
-              onSelectSample={onSelectSample}
-              recentImages={recentImages}
-              onSelectRecent={onSelectRecent}
-              onDeleteRecent={onDeleteRecent}
-              onClearRecent={onClearRecent}
-            />
-            <div className="pt-2 border-t border-neutral-800/80">
-              <TrustBadges />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-full w-full flex-col md:flex-row md:h-full md:overflow-hidden">
-      {/* Docked "Use your own design" panel beside canvas (Desktop >= 768px) */}
-      {showUploader && (
-        <div className="hidden md:block w-72 lg:w-80 shrink-0 border-r border-neutral-800 bg-neutral-900/85 p-3.5 overflow-y-auto space-y-3 z-10 shadow-xl">
-          <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-            <span className="font-semibold text-xs text-neutral-100 flex items-center gap-1.5">
-              <Upload className="h-3.5 w-3.5 text-teal-400" />
-              <span>Use your own design</span>
-            </span>
+    <div className="flex min-h-full w-full flex-col lg:flex-row lg:h-full lg:overflow-hidden">
+      {/* Recents and samples follow results below 1024px. */}
+        <div className={`${showUploader ? '' : 'lg:hidden'} order-last lg:order-none w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-r border-neutral-800 bg-neutral-900/85 p-3.5 overflow-y-auto space-y-3 z-10 shadow-xl`}>
+          <div className="hidden lg:flex items-center justify-end pb-2 border-b border-neutral-800">
             <button
               type="button"
               onClick={() => setShowUploader(false)}
-              className="text-neutral-400 hover:text-neutral-200 text-xs px-1 rounded hover:bg-neutral-800"
-              aria-label="Hide design input panel"
+              className="flex items-center gap-0.5 text-neutral-400 hover:text-neutral-200 text-xs px-1 py-1 rounded hover:bg-neutral-800"
+              aria-label="Hide"
+              title="Hide design input panel"
+              aria-expanded={showUploader}
             >
-              ✕
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Hide
             </button>
           </div>
 
           <DesignUploader
             compact
-            label="Upload new design"
-            sublabel="Drag & drop, browse files, or paste clipboard"
+            libraryOnly
             onSelectImage={onSelectImage}
             onSelectSample={onSelectSample}
             recentImages={recentImages}
@@ -405,28 +342,16 @@ export const Analyze: React.FC<AnalyzeProps> = ({
 
           <div className="pt-2 border-t border-neutral-800/80">
             <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
-              Trust &amp; Privacy Disclosures
+              Trust and privacy
             </div>
             <TrustBadges />
           </div>
         </div>
-      )}
 
       {/* Center: Interactive Canvas Area */}
-      <div className="relative w-full flex flex-col bg-neutral-950 md:flex-1 md:overflow-hidden md:min-h-0">
-        {/* Mobile Compact Uploader Bar (< 768px) */}
-        <div className="md:hidden shrink-0 border-b border-neutral-800 bg-neutral-900/95 px-3 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {imageSrc && (
-            <button
-              type="button"
-              onClick={() => onRemoveImage?.()}
-              aria-label="Remove current image"
-              className="flex items-center gap-1 shrink-0 rounded border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-red-950 hover:text-red-200 hover:border-red-800 transition-colors min-h-[44px]"
-            >
-              <span className="font-bold text-sm leading-none">✕</span>
-              <span>Remove</span>
-            </button>
-          )}
+      <div className="relative w-full flex flex-col bg-neutral-950 lg:flex-1 lg:overflow-hidden lg:min-h-0 lg:min-w-0">
+        {/* Mobile Compact Uploader Bar (< 1024px) */}
+        <div className="lg:hidden shrink-0 border-b border-neutral-800 bg-neutral-900/95 px-3 py-0.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => hiddenFileInputRef.current?.click()}
@@ -464,9 +389,9 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             ))}
           </div>
         </div>
-        {/* Dismissible Hint Bar above Canvas (Desktop >= 768px) */}
+        {/* Dismissible Hint Bar above Canvas (Desktop >= 1024px) */}
         {showHintBar && (
-          <div className="hidden md:flex items-center justify-between bg-teal-950/90 border-b border-teal-800/70 px-4 py-2.5 text-xs text-teal-200 shrink-0">
+          <div className="hidden lg:flex items-center justify-between bg-teal-950/90 border-b border-teal-800/70 px-4 py-2.5 text-xs text-teal-200 shrink-0">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-teal-300">Quick tip:</span>
               <span>Pick a sample or add your design. Results stay on your device.</span>
@@ -475,16 +400,16 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               type="button"
               onClick={onDismissHint}
               aria-label="Dismiss hint"
-              className="rounded text-teal-300 hover:text-white p-1 ml-4 text-xs font-bold"
+              className="shrink-0 rounded text-teal-300 hover:text-white p-1 ml-4 text-xs font-bold"
             >
-              ✕
+              Got it
             </button>
           </div>
         )}
 
-        {/* Dismissible Guided Tutorial Prompt (Desktop >= 768px) */}
+        {/* Dismissible Guided Tutorial Prompt (Desktop >= 1024px) */}
         {showClientGuideCard && (
-          <div className="hidden md:flex items-center justify-between bg-neutral-900 border-b border-neutral-800 px-4 py-2 text-xs text-neutral-200 shrink-0">
+          <div className="hidden lg:flex items-center justify-between bg-neutral-900 border-b border-neutral-800 px-4 py-2 text-xs text-neutral-200 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-teal-400 font-bold">✨ Using Glance for clients?</span>
               <span className="hidden sm:inline">See the 1-minute guide to get the most from reports.</span>
@@ -501,65 +426,46 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 type="button"
                 onClick={onDismissClientGuideCard}
                 aria-label="Dismiss client guide suggestion"
-                className="rounded text-neutral-400 hover:text-white p-1 text-xs font-bold"
+                className="shrink-0 rounded text-neutral-400 hover:text-white p-1 text-xs font-bold"
               >
-                ✕
+                Got it
               </button>
             </div>
           </div>
         )}
 
-        {/* Canvas Toolbar (Desktop >= 768px) */}
-        <div className="hidden md:flex flex-wrap items-center justify-between border-b border-neutral-800 bg-neutral-900/90 px-3 py-1.5 text-xs gap-2">
-          {/* Left: Model Picker + Remove/New image + Uploader Toggle + Layer toggles */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <ModelSwitcher
-              models={models}
-              activeModelId={activeModelId}
-              onSelectModel={onSelectModel}
-            />
-
-            {/* Remove / New Image Buttons (Desktop >= 768px) */}
-            {imageSrc && (
-              <div className="hidden md:flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onRemoveImage?.()}
-                  aria-label="Remove current image"
-                  className="flex items-center gap-1 rounded border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-red-950 hover:text-red-200 hover:border-red-800 transition-colors min-h-[44px]"
-                >
-                  <span className="font-bold text-sm leading-none">✕</span>
-                  <span>Remove</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => hiddenFileInputRef.current?.click()}
-                  aria-label="Select new image"
-                  className="flex items-center gap-1 rounded border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors min-h-[44px]"
-                >
-                  <Upload className="h-3.5 w-3.5 text-teal-400" />
-                  <span>New image</span>
-                </button>
-              </div>
-            )}
+        {/* Canvas Toolbar (Desktop >= 1024px) */}
+        <div className="hidden lg:flex items-center justify-between shrink-0 overflow-x-auto whitespace-nowrap border-b border-neutral-800 bg-neutral-900/90 px-2 py-1 text-xs gap-1 [&>div]:shrink-0">
+          {/* Image selection and layers */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => hiddenFileInputRef.current?.click()}
+              aria-label="Select new image"
+              className="flex h-7 items-center gap-1 rounded border border-neutral-700 bg-neutral-800 px-2 text-xs font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5 text-teal-400" />
+              <span>New image</span>
+            </button>
             <input
               ref={hiddenFileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.[0]) onSelectImage(e.target.files[0]);
-              }}
+              onClick={(event) => { event.currentTarget.value = ''; }}
+              onChange={handleFileChange}
             />
 
             {!showUploader && (
               <button
                 type="button"
                 onClick={() => setShowUploader(true)}
-                className="hidden md:flex items-center gap-1.5 rounded border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors min-h-[44px]"
+                className="flex h-7 w-7 items-center justify-center rounded border border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors"
+                aria-label="Show design input panel"
+                title="Show design input panel"
+                aria-expanded={showUploader}
               >
                 <Upload className="h-3.5 w-3.5 text-teal-400" />
-                <span>Use your own design</span>
               </button>
             )}
 
@@ -568,31 +474,33 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={() => setShowHeatmap(!showHeatmap)}
+              disabled={!result}
               title="Heatmap: warm spots show where viewers look first"
               aria-label="Toggle Heatmap"
-              className={`flex items-center gap-1 rounded px-2.5 py-1 transition-colors min-h-[44px] ${
+              aria-pressed={showHeatmap}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
                 showHeatmap
                   ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
                   : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
             >
               <Flame className="h-3.5 w-3.5" />
-              <span>Heatmap</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowGazeOrder(!showGazeOrder)}
+              disabled={!result}
               title="Likely look order: numbered sequence of first eye jumps"
               aria-label="Toggle Likely Look Order"
-              className={`flex items-center gap-1 rounded px-2.5 py-1 transition-colors min-h-[44px] ${
+              aria-pressed={showGazeOrder}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
                 showGazeOrder
                   ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
                   : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
             >
               <Eye className="h-3.5 w-3.5" />
-              <span>Likely look order</span>
             </button>
 
             <button
@@ -602,15 +510,16 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 if (!showFog) setShowUncertainty(false);
               }}
               title="Hide low attention: dims areas receiving little or no glances"
+              disabled={!result}
               aria-label="Toggle Hide Low Attention"
-              className={`flex items-center gap-1 rounded px-2.5 py-1 transition-colors min-h-[44px] ${
+              aria-pressed={showFog}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
                 showFog
                   ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
                   : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
             >
               <CloudFog className="h-3.5 w-3.5" />
-              <span>Hide low attention</span>
             </button>
 
             <button
@@ -620,15 +529,16 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 if (!showUncertainty) setShowFog(false);
               }}
               title="Model confidence: highlights where prediction is confident vs ambiguous"
+              disabled={!result}
               aria-label="Toggle Model Confidence"
-              className={`flex items-center gap-1 rounded px-2.5 py-1 transition-colors min-h-[44px] ${
+              aria-pressed={showUncertainty}
+              className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
                 showUncertainty
                   ? 'bg-teal-950 text-teal-300 border border-teal-800/60 font-medium'
                   : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>Model confidence</span>
             </button>
           </div>
 
@@ -640,11 +550,12 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 aria-pressed={showSquint}
                 onClick={() => setShowSquint(!showSquint)}
                 title="Squint test: grayscale blur reveals basic brightness contrast"
-                className={`rounded px-2.5 py-1 min-h-[44px] ${
+                aria-label="Toggle Squint Test"
+                className={`flex h-7 w-7 items-center justify-center rounded ${
                   showSquint ? 'bg-teal-950 text-teal-300 font-medium' : 'bg-neutral-800 text-neutral-300'
                 }`}
               >
-                Squint test
+                <Eye className="h-3.5 w-3.5 blur-[0.5px]" />
               </button>
               <MetricsInfoPopover
                 badge="Visual check"
@@ -656,12 +567,13 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-2 pl-2">
+          <div className="flex items-center gap-1">
             <span className="text-neutral-400 text-[11px]">Opacity:</span>
-            <div className="w-20">
+            <div className="w-12">
               <Slider.Root
                 value={[opacity]}
                 onValueChange={(val) => setOpacity(val[0])}
+                disabled={!result}
                 max={100}
                 min={10}
                 step={5}
@@ -684,16 +596,17 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={() => setIsDrawingAoi(!isDrawingAoi)}
+              disabled={!result}
               title="Draw a box around your button or logo to see how much attention it gets"
               aria-label="Check a part"
-              className={`flex items-center gap-1 rounded px-2.5 py-1 font-medium transition-colors min-h-[44px] ${
+              aria-pressed={isDrawingAoi}
+              className={`flex h-7 w-7 items-center justify-center rounded font-medium transition-colors ${
                 isDrawingAoi
                   ? 'bg-amber-600 text-white'
                   : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
               }`}
             >
               <Square className="h-3.5 w-3.5" />
-              <span>{isDrawingAoi ? 'Drawing part box...' : '+ Check a part'}</span>
             </button>
 
             <div className="h-4 w-px bg-neutral-800 mx-1" />
@@ -701,9 +614,10 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}
+              disabled={!imageSrc}
               aria-label="Zoom Out"
               title="Zoom Out"
-              className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="rounded h-7 w-7 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 flex items-center justify-center"
             >
               <ZoomOut className="h-3.5 w-3.5" />
             </button>
@@ -713,9 +627,10 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
+              disabled={!imageSrc}
               aria-label="Zoom In"
               title="Zoom In"
-              className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="rounded h-7 w-7 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 flex items-center justify-center"
             >
               <ZoomIn className="h-3.5 w-3.5" />
             </button>
@@ -727,8 +642,9 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 setActiveSliceIndex(undefined);
               }}
               aria-label="Reset View to 100%"
+              disabled={!imageSrc}
               title="Reset View"
-              className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="rounded h-7 w-7 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 flex items-center justify-center"
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
@@ -739,9 +655,10 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={handleExportPdf}
+              disabled={!result}
               title="Download PDF attention report"
               aria-label="Download PDF report"
-              className="flex items-center gap-1 rounded bg-teal-600 hover:bg-teal-500 text-white px-2.5 py-1 text-xs font-medium transition-colors min-h-[44px]"
+              className="flex h-7 items-center gap-1 rounded bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 text-xs font-medium transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
               <span>Report</span>
@@ -749,18 +666,20 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <button
               type="button"
               onClick={handleExportPng}
+              disabled={!result}
               title="Download PNG overlay image"
               aria-label="Download PNG image"
-              className="flex items-center gap-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2.5 py-1 text-xs font-medium transition-colors min-h-[44px]"
+              className="flex h-7 items-center gap-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 text-xs font-medium transition-colors"
             >
               <span>PNG</span>
             </button>
             <button
               type="button"
               onClick={handleExportJson}
+              disabled={!result}
               title="Download JSON analysis data"
               aria-label="Download JSON data"
-              className="flex items-center gap-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2.5 py-1 text-xs font-medium transition-colors min-h-[44px]"
+              className="flex h-7 items-center gap-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 text-xs font-medium transition-colors"
             >
               <span>JSON</span>
             </button>
@@ -768,7 +687,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
         </div>
 
         {/* Viewport canvas container with optional Scroll Attention Strip for Full-Page mode */}
-        <div className="relative w-full flex md:flex-1 overflow-hidden md:min-h-0">
+        <div className="relative w-full flex lg:flex-1 overflow-hidden lg:min-h-0 lg:[container-type:size]">
           <div
             ref={containerRef}
             onMouseDown={handleMouseDown}
@@ -778,7 +697,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             style={{ touchAction: zoom > 1.05 ? 'none' : 'pan-y' }}
-            className={`relative flex flex-1 items-center justify-center overflow-hidden p-2 sm:p-4 md:p-6 select-none ${
+            className={`relative flex flex-1 items-center justify-center overflow-hidden p-2 sm:p-4 lg:p-6 select-none ${
               isDrawingAoi
                 ? 'cursor-crosshair'
                 : isPanning
@@ -803,210 +722,259 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               </div>
             )}
 
-            {/* Scalable Image Canvas Frame */}
-            <div
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: 'center center',
-                transition: isPanning ? 'none' : 'transform 0.05s ease-out',
-              }}
-              className="relative shadow-2xl rounded-sm overflow-hidden"
-            >
-              {/* Base Image */}
-              <img
-                ref={imageRef}
-                src={imageSrc}
-                alt="Analyzed subject"
-                className="max-h-[60vh] md:max-h-[75vh] w-full md:w-auto max-w-full md:max-w-[70vw] object-contain block"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-              />
-
-              {/* Laser Grid Scan Overlay (Req 1) */}
-              <LaserScanOverlay isScanning={isScanning} reducedMotion={reducedMotion} />
-
-              {/* Fog of attention Layer - fades in after scan completes */}
-              {result && !isScanning && showFog && (
+            {!imageSrc ? (
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Add an image"
+                onClick={() => hiddenFileInputRef.current?.click()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    hiddenFileInputRef.current?.click();
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`flex min-h-64 w-full self-stretch flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${isDragging ? 'border-teal-400 bg-teal-950/40' : 'border-neutral-700/80 bg-neutral-900/60'}`}
+              >
+                <Upload className="h-8 w-8 text-teal-400 mb-3" aria-hidden="true" />
+                <p className="text-sm font-semibold text-neutral-100">Drop image here or click to choose</p>
+                <p className="mt-1 text-xs text-neutral-400">or paste (Ctrl+V)</p>
+              </div>
+            ) : (
+            /* Pin removal to the image at 100% and the canvas while zoomed. */
+            <div className={zoom === 1 ? 'relative min-w-0 max-h-full' : 'contents'}>
+              <button
+                type="button"
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={() => onRemoveImage?.()}
+                aria-label="Remove image"
+                title="Remove image"
+                className="absolute right-2 top-2 z-40 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-600 bg-neutral-900/95 text-sm text-white shadow hover:bg-red-950 hover:border-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:content-['']"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+              {/* Scalable Image Canvas Frame */}
+              <div
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  transition: isPanning ? 'none' : 'transform 0.05s ease-out',
+                }}
+                className="relative shadow-2xl rounded-sm overflow-hidden"
+              >
+                {/* Base Image */}
                 <img
-                  src={pngDataUrl(result.fog_png_b64)}
-                  alt="Hide low attention"
-                  style={{ opacity: opacity / 100 }}
-                  className={`absolute inset-0 h-full w-full object-contain ${
-                    reducedMotion ? '' : 'animate-result-fade'
-                  }`}
+                  ref={imageRef}
+                  src={imageSrc}
+                  alt="Analyzed subject"
+                  className="max-h-[60vh] lg:max-h-[calc(100cqh-3rem)] w-auto max-w-full object-contain block"
                   draggable={false}
                   onDragStart={(e) => e.preventDefault()}
                 />
-              )}
 
-              {/* Heatmap Layer - fades in ~400ms after scan completes */}
-              {result && !isScanning && showHeatmap && !showFog && (
-                <img
-                  src={pngDataUrl(result.heatmap_png_b64)}
-                  alt="Attention Heatmap"
-                  style={{ opacity: opacity / 100 }}
-                  className={`absolute inset-0 h-full w-full object-contain ${
-                    reducedMotion ? '' : 'animate-heatmap-fade'
-                  }`}
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                />
-              )}
+                {/* Laser Grid Scan Overlay (Req 1) */}
+                <LaserScanOverlay isScanning={isScanning} reducedMotion={reducedMotion} />
 
-              {/* Uncertainty Map Layer */}
-              {result && !isScanning && showUncertainty && result.metrics.agreement?.uncertainty_png_b64 && (
-                <img
-                  src={pngDataUrl(result.metrics.agreement.uncertainty_png_b64)}
-                  alt="Model confidence map"
-                  style={{ opacity: opacity / 100 }}
-                  className={`absolute inset-0 h-full w-full object-contain ${
-                    reducedMotion ? '' : 'animate-result-fade'
-                  }`}
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                />
-              )}
-
-              {/* Squint Test Layer */}
-              {result?.squint_png_b64 && !isScanning && showSquint && (
-                <img
-                  src={pngDataUrl(result.squint_png_b64)}
-                  alt="Squint test: blurred grayscale values"
-                  className={`absolute inset-0 h-full w-full object-contain ${
-                    reducedMotion ? '' : 'animate-result-fade'
-                  }`}
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                />
-              )}
-
-              {/* Scanpath Layer: Numbered dots 1-7 + connecting lines */}
-              {result && !isScanning && showGazeOrder && (
-                <svg className="absolute inset-0 h-full w-full pointer-events-none">
-                  {/* Connecting lines */}
-                  {result.scanpath.map((point, idx) => {
-                    if (idx === 0) return null;
-                    const prev = result.scanpath[idx - 1];
-                    return (
-                      <line
-                        key={`line-${idx}`}
-                        x1={`${prev.x}%`}
-                        y1={`${prev.y}%`}
-                        x2={`${point.x}%`}
-                        y2={`${point.y}%`}
-                        stroke="#f59e0b"
-                        strokeWidth="2"
-                        strokeDasharray="4 2"
-                        strokeOpacity="0.85"
-                        className={reducedMotion ? '' : 'animate-line-reveal'}
-                        style={reducedMotion ? undefined : { animationDelay: `${250 + (idx - 1) * 120}ms` }}
-                      />
-                    );
-                  })}
-
-                  {/* Numbered Dots */}
-                  {result.scanpath.map((point, idx) => (
-                    <g
-                      key={`point-${point.order}`}
-                      className={reducedMotion ? '' : 'animate-gaze-pop'}
-                      style={reducedMotion ? undefined : {
-                        animationDelay: `${250 + idx * 120}ms`,
-                        transformOrigin: `${point.x}% ${point.y}%`,
-                      }}
-                    >
-                      <circle
-                        cx={`${point.x}%`}
-                        cy={`${point.y}%`}
-                        r="12"
-                        fill={point.order === 1 ? '#0d9488' : '#1e293b'}
-                        stroke="#f59e0b"
-                        strokeWidth="2"
-                      />
-                      <text
-                        x={`${point.x}%`}
-                        y={`${point.y}%`}
-                        textAnchor="middle"
-                        dy="4"
-                        fill="#ffffff"
-                        fontSize="10"
-                        fontWeight="bold"
-                      >
-                        {point.order}
-                      </text>
-                    </g>
-                  ))}
-                </svg>
-              )}
-
-              {/* Marked Areas Overlays */}
-              {aois.map((aoi) => {
-                const isSelected = aoi.id === selectedAoiId;
-                const share = result?.metrics.aoi_share.find((s) => s.id === aoi.id)?.share ?? 0;
-                return (
-                  <div
-                    key={aoi.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedAoiId(aoi.id);
-                    }}
-                    style={{
-                      left: `${aoi.x}%`,
-                      top: `${aoi.y}%`,
-                      width: `${aoi.width}%`,
-                      height: `${aoi.height}%`,
-                      borderColor: aoi.color || '#14b8a6',
-                    }}
-                    className={`absolute border-2 bg-teal-500/10 cursor-pointer transition-all ${
-                      isSelected ? 'ring-2 ring-white ring-offset-1 shadow-lg' : ''
+                {/* Fog of attention Layer - fades in after scan completes */}
+                {result && !isScanning && showFog && (
+                  <img
+                    src={pngDataUrl(result.fog_png_b64)}
+                    alt="Hide low attention"
+                    style={{ opacity: opacity / 100 }}
+                    className={`absolute inset-0 h-full w-full object-contain ${
+                      reducedMotion ? '' : 'animate-result-fade'
                     }`}
-                  >
-                    <div
-                      style={{ backgroundColor: aoi.color || '#14b8a6' }}
-                      className="absolute -top-5 left-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white shadow"
-                    >
-                      <span>{aoi.name}</span>
-                      <span className="font-mono bg-black/40 px-1 rounded">{share.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                );
-              })}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                )}
 
-              {/* In-progress drawing rectangle */}
-              {isDrawingAoi && drawStart && drawCurrent && (
-                <div
-                  style={{
-                    left: `${Math.min(drawStart.x, drawCurrent.x)}%`,
-                    top: `${Math.min(drawStart.y, drawCurrent.y)}%`,
-                    width: `${Math.abs(drawCurrent.x - drawStart.x)}%`,
-                    height: `${Math.abs(drawCurrent.y - drawStart.y)}%`,
-                  }}
-                  className="absolute border-2 border-dashed border-amber-400 bg-amber-500/20 pointer-events-none"
-                />
-              )}
+                {/* Heatmap Layer - fades in ~400ms after scan completes */}
+                {result && !isScanning && showHeatmap && !showFog && (
+                  <HeatmapImage
+                    png={result.heatmap_png_b64}
+                    colorRamp={colorRamp}
+                    alt="Attention Heatmap"
+                    style={{ opacity: opacity / 100, '--heatmap-opacity': opacity / 100 } as React.CSSProperties}
+                    className={`absolute inset-0 h-full w-full object-contain ${
+                      reducedMotion ? '' : 'animate-heatmap-fade'
+                    }`}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                )}
+
+                {/* Uncertainty Map Layer */}
+                {result && !isScanning && showUncertainty && result.metrics.agreement?.uncertainty_png_b64 && (
+                  <img
+                    src={pngDataUrl(result.metrics.agreement.uncertainty_png_b64)}
+                    alt="Model confidence map"
+                    style={{ opacity: opacity / 100 }}
+                    className={`absolute inset-0 h-full w-full object-contain ${
+                      reducedMotion ? '' : 'animate-result-fade'
+                    }`}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                )}
+
+                {/* Squint Test Layer */}
+                {result?.squint_png_b64 && !isScanning && showSquint && (
+                  <img
+                    src={pngDataUrl(result.squint_png_b64)}
+                    alt="Squint test: blurred grayscale values"
+                    className={`absolute inset-0 h-full w-full object-contain ${
+                      reducedMotion ? '' : 'animate-result-fade'
+                    }`}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                )}
+
+                {/* Scanpath Layer: Numbered dots 1-7 + connecting lines */}
+                {result && !isScanning && showGazeOrder && (
+                  <svg className="absolute inset-0 h-full w-full pointer-events-none">
+                    {/* Connecting lines */}
+                    {result.scanpath.map((point, idx) => {
+                      if (idx === 0) return null;
+                      const prev = result.scanpath[idx - 1];
+                      return (
+                        <line
+                          key={`line-${idx}`}
+                          x1={`${prev.x}%`}
+                          y1={`${prev.y}%`}
+                          x2={`${point.x}%`}
+                          y2={`${point.y}%`}
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                          strokeDasharray="4 2"
+                          strokeOpacity="0.85"
+                          className={reducedMotion ? '' : 'animate-line-reveal'}
+                          style={reducedMotion ? undefined : { animationDelay: `${250 + (idx - 1) * 120}ms` }}
+                        />
+                      );
+                    })}
+
+                    {/* Numbered Dots */}
+                    {result.scanpath.map((point, idx) => (
+                      <g
+                        key={`point-${point.order}`}
+                        className={reducedMotion ? '' : 'animate-gaze-pop'}
+                        style={reducedMotion ? undefined : {
+                          animationDelay: `${250 + idx * 120}ms`,
+                          transformOrigin: `${point.x}% ${point.y}%`,
+                        }}
+                      >
+                        <circle
+                          cx={`${point.x}%`}
+                          cy={`${point.y}%`}
+                          r="12"
+                          fill={point.order === 1 ? '#0d9488' : '#1e293b'}
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={`${point.x}%`}
+                          y={`${point.y}%`}
+                          textAnchor="middle"
+                          dy="4"
+                          fill="#ffffff"
+                          fontSize="10"
+                          fontWeight="bold"
+                        >
+                          {point.order}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                )}
+
+                {/* Marked Areas Overlays */}
+                {aois.map((aoi) => {
+                  const isSelected = aoi.id === selectedAoiId;
+                  const share = result?.metrics.aoi_share.find((s) => s.id === aoi.id)?.share ?? 0;
+                  return (
+                    <div
+                      key={aoi.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAoiId(aoi.id);
+                      }}
+                      style={{
+                        left: `${aoi.x}%`,
+                        top: `${aoi.y}%`,
+                        width: `${aoi.width}%`,
+                        height: `${aoi.height}%`,
+                        borderColor: aoi.color || '#14b8a6',
+                      }}
+                      className={`absolute border-2 bg-teal-500/10 cursor-pointer transition-all ${
+                        isSelected ? 'ring-2 ring-white ring-offset-1 shadow-lg' : ''
+                      }`}
+                    >
+                      <div
+                        style={{ backgroundColor: aoi.color || '#14b8a6' }}
+                        className="absolute -top-5 left-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white shadow"
+                      >
+                        <span>{aoi.name}</span>
+                        <span className="font-mono bg-black/40 px-1 rounded">{share.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* In-progress drawing rectangle */}
+                {isDrawingAoi && drawStart && drawCurrent && (
+                  <div
+                    style={{
+                      left: `${Math.min(drawStart.x, drawCurrent.x)}%`,
+                      top: `${Math.min(drawStart.y, drawCurrent.y)}%`,
+                      width: `${Math.abs(drawCurrent.x - drawStart.x)}%`,
+                      height: `${Math.abs(drawCurrent.y - drawStart.y)}%`,
+                    }}
+                    className="absolute border-2 border-dashed border-amber-400 bg-amber-500/20 pointer-events-none"
+                  />
+                )}
+              </div>
             </div>
+            )}
           </div>
 
-          {/* Full-Page Scroll Attention Strip */}
-          {fullPageResult && (
-            <div className="absolute right-4 top-4 z-20 w-64 max-h-[80%] overflow-hidden shadow-2xl">
-              <ScrollAttentionStrip
-                slices={fullPageResult.slices}
-                activeSliceIndex={activeSliceIndex}
-                onSelectSlice={handleSelectSlice}
-              />
+        </div>
+          {imageSrc && (
+            <div role="group" aria-label="Image controls" className="lg:hidden flex items-center gap-2 border-t border-neutral-800 bg-neutral-900 px-3 py-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                disabled={!result}
+                aria-pressed={showHeatmap}
+                className={`min-h-[44px] min-w-[44px] rounded px-2 ${showHeatmap ? 'bg-teal-950 text-teal-300' : 'bg-neutral-800 text-neutral-400'}`}
+              >
+                Heatmap
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGazeOrder(!showGazeOrder)}
+                disabled={!result}
+                aria-pressed={showGazeOrder}
+                className={`min-h-[44px] min-w-[44px] rounded px-2 ${showGazeOrder ? 'bg-teal-950 text-teal-300' : 'bg-neutral-800 text-neutral-400'}`}
+              >
+                Look order
+              </button>
+              <label className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-neutral-300">
+                Opacity
+                <input type="range" aria-label="Heatmap opacity" min={10} max={100} step={5} value={opacity} disabled={!result} onChange={event => setOpacity(Number(event.target.value))} className="h-11 min-w-[44px] w-full accent-teal-500" />
+              </label>
             </div>
           )}
-        </div>
       </div>
 
       {/* Right: Metrics Side Panel */}
-      <div className="w-full md:w-72 lg:w-80 shrink-0 border-t md:border-t-0 md:border-l border-neutral-800 bg-neutral-900/70 p-4 md:overflow-y-auto space-y-4">
-        <div className="hidden md:flex items-center justify-between border-b border-neutral-800 pb-2">
-          <h3 className="font-semibold text-neutral-100 text-sm">Attention Metrics</h3>
-          <span className="text-[10px] font-mono text-teal-400 bg-teal-950 px-1.5 py-0.5 rounded border border-teal-800/40">
-            {result?.model.toUpperCase() || 'UNISAL'}
-          </span>
-        </div>
+      <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-neutral-800 bg-neutral-900/70 p-4 lg:overflow-y-auto space-y-4">
+        {!result && <p className="text-xs text-neutral-400">Results appear after you add an image.</p>}
 
         {/* What to look at line + Next Actions (Brief A-3 Item 4) */}
         {result && (
@@ -1015,19 +983,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               <Sparkles className="h-3.5 w-3.5 text-teal-400" />
               <span>What to look at first</span>
             </div>
-            {(() => {
-              const top = getTopLookedAtAreas(result, aois);
-              return (
-                <ol className="text-xs text-neutral-200 space-y-1 pl-1">
-                  {top.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5 leading-snug">
-                      <span className="text-teal-400 font-bold">{idx + 1}.</span>
-                      <span className="text-neutral-200 font-medium">{item}</span>
-                    </li>
-                  ))}
-                </ol>
-              );
-            })()}
+            <p className="text-xs text-neutral-200 leading-relaxed">{buildAnalyzeSummary(result, aois)}</p>
             <div className="pt-2 border-t border-teal-800/40 flex flex-wrap gap-1.5 text-xs">
               <button
                 type="button"
@@ -1065,6 +1021,14 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </div>
         )}
 
+        {result && <>
+        <div className="hidden lg:flex items-center justify-between border-b border-neutral-800 pb-2">
+          <h3 className="font-semibold text-neutral-100 text-sm">Attention Metrics</h3>
+          <span className="text-[10px] font-mono text-teal-400 bg-teal-950 px-1.5 py-0.5 rounded border border-teal-800/40">
+            {result.model.toUpperCase()}
+          </span>
+        </div>
+
         {/* Full page fold mode banner */}
         {fullPageResult && (
           <div className="rounded-lg border border-teal-800/60 bg-teal-950/30 p-2.5 text-xs text-teal-300 flex items-center justify-between">
@@ -1076,18 +1040,25 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </div>
         )}
 
+        {/* Full-Page Scroll Attention Strip */}
+        {fullPageResult && (
+          <ScrollAttentionStrip
+            slices={fullPageResult.slices}
+            activeSliceIndex={activeSliceIndex}
+            onSelectSlice={handleSelectSlice}
+          />
+        )}
+
         {/* 1. Clarity Score */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3.5 space-y-2">
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-medium text-neutral-300 block">Visual Clarity</span>
-              <span className="text-[10px] text-neutral-400">Higher = people look at fewer things</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="font-mono text-lg font-bold text-teal-400">
                 {displayClarity !== null ? displayClarity.toFixed(1) : (result?.metrics.clarity.toFixed(1) ?? '--')}
               </span>
-              <span className="text-xs text-neutral-400">/ 100</span>
               <MetricsInfoPopover
                 title="Visual Clarity Score"
                 formula="1 − H(heatmap)/log(N_pixels) on 64×64 downsample"
@@ -1097,19 +1068,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             </div>
           </div>
 
-          <div className="h-2 w-full rounded-full bg-neutral-800 overflow-hidden">
-            <div
-              className="h-full bg-teal-500 rounded-full transition-all"
-              style={{ width: `${Math.min(100, displayClarity ?? result?.metrics.clarity ?? 0)}%` }}
-            />
-          </div>
-
           <p className="text-[11px] text-neutral-400 leading-snug">
-            {result && (displayClarity ?? result.metrics.clarity) > 65
-              ? 'Clear visual focus with minimal clutter.'
-              : result && (displayClarity ?? result.metrics.clarity) > 40
-              ? 'Moderate focus across multiple elements.'
-              : 'Attention is scattered across many parts.'}
+            Higher means eyes settle on fewer places.
           </p>
         </div>
 
@@ -1260,6 +1220,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </span>
           <TrustBadges compact />
         </div>
+        </>}
       </div>
     </div>
   );

@@ -11,23 +11,13 @@ interface DesignUploaderProps {
   onDeleteRecent?: (id: string) => void;
   onClearRecent?: () => void;
   compact?: boolean;
+  libraryOnly?: boolean;
   label?: string;
   sublabel?: string;
   className?: string;
 }
 
-export const DesignUploader: React.FC<DesignUploaderProps> = ({
-  onSelectImage,
-  onSelectSample,
-  recentImages = [],
-  onSelectRecent,
-  onDeleteRecent,
-  onClearRecent,
-  compact = false,
-  label = 'Use your own design',
-  sublabel = 'Drag & drop, browse files, or paste from clipboard',
-  className = '',
-}) => {
+export function useDesignUpload(onSelectImage: (file: File) => void, enabled = true) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pasteNotice, setPasteNotice] = useState<string | null>(null);
@@ -87,6 +77,7 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
 
   // Window paste listener when this uploader is active
   useEffect(() => {
+    if (!enabled) return;
     const onWindowPaste = (e: ClipboardEvent) => {
       if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
         for (let i = 0; i < e.clipboardData.files.length; i++) {
@@ -100,11 +91,30 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
     };
     window.addEventListener('paste', onWindowPaste);
     return () => window.removeEventListener('paste', onWindowPaste);
-  }, [onSelectImage]);
+  }, [onSelectImage, enabled]);
+
+  return { fileInputRef, isDragging, pasteNotice, handleDragOver, handleDragLeave, handleDrop, handleFileChange, handlePasteFromClipboard };
+}
+
+export const DesignUploader: React.FC<DesignUploaderProps> = ({
+  onSelectImage,
+  onSelectSample,
+  recentImages = [],
+  onSelectRecent,
+  onDeleteRecent,
+  onClearRecent,
+  compact = false,
+  libraryOnly = false,
+  label = 'Use your own design',
+  sublabel = 'Drag & drop, browse files, or paste from clipboard',
+  className = '',
+}) => {
+  const { fileInputRef, isDragging, pasteNotice, handleDragOver, handleDragLeave, handleDrop, handleFileChange, handlePasteFromClipboard } = useDesignUpload(onSelectImage, !libraryOnly);
 
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Drop Zone */}
+      {!libraryOnly && (
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -174,37 +184,6 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
           </p>
         )}
       </div>
-
-      {/* Preset Samples Selector */}
-      {onSelectSample && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-neutral-400">
-            <span className="font-semibold uppercase tracking-wider text-neutral-300">
-              Or try a sample design:
-            </span>
-            <span className="text-[10px] text-teal-400 font-mono">1.5s laser scan test</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {SAMPLES.map((sample) => (
-              <button
-                key={sample.id}
-                type="button"
-                onClick={() => onSelectSample(sample.id)}
-                className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 text-left hover:border-teal-700/60 hover:bg-neutral-900 transition-all group"
-              >
-                <img
-                  src={sample.thumbnail}
-                  alt=""
-                  aria-hidden="true"
-                  className="h-8 w-8 shrink-0 rounded border border-neutral-700/80 object-cover bg-neutral-950 group-hover:scale-105 transition-transform"
-                />
-                <span className="text-xs font-medium text-neutral-200 leading-tight">
-                  {sample.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Recent Images Strip */}
@@ -268,6 +247,37 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
                   {item.name}
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Preset Samples Selector */}
+      {onSelectSample && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] text-neutral-400">
+            <span className="font-semibold uppercase tracking-wider text-neutral-300">
+              {libraryOnly ? 'Try a sample design' : 'Or try a sample design:'}
+            </span>
+            {!libraryOnly && <span className="text-[10px] text-teal-400 font-mono">1.5s laser scan test</span>}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {SAMPLES.map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                onClick={() => onSelectSample(sample.id)}
+                className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 text-left hover:border-teal-700/60 hover:bg-neutral-900 transition-all group"
+              >
+                <img
+                  src={sample.thumbnail}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-8 w-8 shrink-0 rounded border border-neutral-700/80 object-cover bg-neutral-950 group-hover:scale-105 transition-transform"
+                />
+                <span className="text-xs font-medium text-neutral-200 leading-tight">
+                  {sample.name}
+                </span>
+              </button>
             ))}
           </div>
         </div>

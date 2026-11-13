@@ -1,4 +1,4 @@
-export type SampleType = 'hero' | 'product' | 'mobile' | 'ad' | 'tall';
+export type SampleType = 'hero' | 'hero-variant' | 'product' | 'mobile' | 'ad' | 'tall';
 
 export interface SampleMeta {
   id: SampleType;
@@ -439,6 +439,9 @@ export const AD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 
 
 export const SAMPLE_SVGS: Record<string, string> = {
   hero: HERO_SVG,
+  'hero-variant': HERO_SVG
+    .replace('fill="url(#hCta)"', 'fill="#fbbf24"')
+    .replace('x="128" y="285" fill="#ffffff"', 'x="128" y="285" fill="#0f172a"'),
   product: PRODUCT_SVG,
   mobile: MOBILE_SVG,
   ad: AD_SVG,
