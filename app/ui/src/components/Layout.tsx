@@ -74,7 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('home')}
-            className="flex items-center gap-1.5 sm:gap-2 group text-left focus:outline-none shrink-0"
+            className="flex items-center gap-1.5 sm:gap-2 group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 shrink-0"
           >
             <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0" fill="none" role="img" aria-label="Glance Logo">
               <path d="M 3.5 16 C 8.5 7.5 23.5 7.5 28.5 16 C 23.5 24.5 8.5 24.5 3.5 16 Z" stroke="#2dd4bf" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -149,7 +149,7 @@ export const Layout: React.FC<LayoutProps> = ({
           onClick={() => setMobileMenuOpen(true)}
           aria-label="Open navigation menu"
           aria-expanded={mobileMenuOpen}
-          className="flex lg:hidden items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors shrink-0 min-h-[36px]"
+          className="flex lg:hidden items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-3.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700 hover:text-white transition-colors shrink-0"
         >
           <Menu className="h-4 w-4 text-teal-400" />
           <span>Menu</span>

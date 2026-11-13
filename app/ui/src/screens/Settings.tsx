@@ -121,7 +121,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <button
             type="button"
             onClick={handleSaveApi}
-            className="rounded-md bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-medium transition-colors"
+            className="rounded-md bg-teal-700 hover:bg-teal-800 text-white px-3.5 py-1.5 text-xs font-medium transition-colors"
           >
             Apply Transport Configuration
           </button>
@@ -192,7 +192,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-950 border border-neutral-800">
+          <label className="flex items-center justify-between p-3 rounded-lg bg-neutral-950 border border-neutral-800 cursor-pointer">
             <div>
               <div className="text-xs font-medium text-neutral-200">Reduced Motion</div>
               <div className="text-[11px] text-neutral-400">
@@ -201,11 +201,12 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
             <input
               type="checkbox"
+              aria-label="Reduced Motion"
               checked={reducedMotion}
               onChange={onToggleReducedMotion}
               className="accent-teal-500 h-4 w-4 rounded cursor-pointer"
             />
-          </div>
+          </label>
         </div>
       </div>
 

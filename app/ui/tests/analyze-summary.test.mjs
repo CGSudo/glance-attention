@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAnalyzeSummary } from '../src/utils/analyzeSummary.ts';
+import { buildAnalyzeSummary, getPositionLabel } from '../src/utils/analyzeSummary.ts';
+
+test('Look order uses the summary position labels, including boundaries', () => {
+  for (const [x, y, label] of [
+    [0, 0, 'top left'], [35, 34, 'top center'], [66, 34, 'top right'],
+    [34, 35, 'left side'], [35, 35, 'center'], [65, 65, 'center'],
+    [66, 65, 'right side'], [49, 66, 'bottom left'], [50, 66, 'bottom right'],
+  ]) {
+    assert.equal(getPositionLabel({ x, y }), label);
+    assert.ok(buildAnalyzeSummary({ metrics: { clarity: 1, aoi_share: [] }, scanpath: [{ x, y }] }, []).includes(`at the ${label} first`));
+  }
+});
 
 test('Analyze summary uses result values, look order, and marked attention shares', () => {
   const aois = [

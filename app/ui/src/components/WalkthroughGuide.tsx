@@ -141,7 +141,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
             type="button"
             onClick={() => setIsPlaying((p) => !p)}
             aria-label={isPlaying ? 'Pause walkthrough' : 'Play walkthrough'}
-            className="inline-flex items-center gap-1.5 min-h-[44px] min-w-[44px] rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-2 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 min-h-[44px] min-w-[44px] rounded-lg bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 text-xs font-medium transition-colors"
           >
             {isPlaying ? (
               <>
@@ -363,7 +363,7 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
           </div>
 
           {/* Stepper Dots */}
-          <div className="flex items-center justify-center gap-2 pt-3 border-t border-neutral-800/80">
+          <div className="flex items-center justify-center gap-0 lg:gap-2 pt-3 border-t border-neutral-800/80">
             {STEPS.map((s, idx) => (
               <button
                 key={s.id}
@@ -373,10 +373,12 @@ export const WalkthroughGuide: React.FC<WalkthroughGuideProps> = ({ reducedMotio
                   setCurrentStepIndex(idx);
                 }}
                 aria-label={`Jump to ${s.title}`}
-                className={`h-2 rounded-full transition-all ${
+                className="relative flex items-center justify-center p-[22px] lg:p-0"
+              >
+                <span className={`absolute lg:static block h-2 rounded-full transition-all ${
                   idx === currentStepIndex ? 'w-6 bg-teal-400' : 'w-2 bg-neutral-700 hover:bg-neutral-500'
-                }`}
-              />
+                }`} />
+              </button>
             ))}
           </div>
         </div>

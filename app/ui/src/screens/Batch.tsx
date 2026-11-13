@@ -246,7 +246,7 @@ export const Batch: React.FC<BatchProps> = ({ activeModelId, contentType }) => {
             type="button"
             disabled={items.length === 0 || isProcessing}
             onClick={runBatchProcessing}
-            className="min-h-[44px] rounded-md bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white px-4 py-2 text-xs font-semibold transition-colors"
+            className="min-h-[44px] rounded-md bg-teal-700 hover:bg-teal-800 disabled:opacity-40 text-white px-4 py-2 text-xs font-semibold transition-colors"
           >
             {isProcessing ? 'Processing Batch...' : 'Run All'}
           </button>

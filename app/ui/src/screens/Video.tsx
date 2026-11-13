@@ -196,7 +196,7 @@ export const Video: React.FC = () => {
                 type="button"
                 onClick={() => setIsPlaying(!isPlaying)}
                 aria-label={isPlaying ? 'Pause video playback' : 'Play video playback'}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-teal-600 text-white hover:bg-teal-500 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-teal-700 text-white hover:bg-teal-800 transition-colors"
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
               </button>

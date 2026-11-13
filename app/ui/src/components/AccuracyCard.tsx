@@ -85,7 +85,7 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
             <button
               onClick={onInstall}
               disabled={!!installProgress}
-              className="rounded bg-teal-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-teal-500 transition-colors"
+              className="rounded bg-teal-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
             >
               {installProgress ? 'Installing…' : 'Install'}
             </button>

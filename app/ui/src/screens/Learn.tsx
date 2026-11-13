@@ -300,7 +300,7 @@ export const Learn: React.FC<{ reducedMotion: boolean }> = ({ reducedMotion }) =
             type="button"
             disabled={activeStep === 5}
             onClick={() => setActiveStep((s) => s + 1)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-teal-600 hover:bg-teal-500 disabled:opacity-30 text-white px-3.5 py-1.5 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-teal-700 hover:bg-teal-800 disabled:opacity-30 text-white px-3.5 py-1.5 text-xs font-medium transition-colors"
           >
             <span>Next</span>
             <ArrowRight className="h-3.5 w-3.5" />

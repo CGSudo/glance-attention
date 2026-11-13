@@ -27,10 +27,10 @@ import { DesignUploader, useDesignUpload } from '../components/DesignUploader';
 import { ScrollAttentionStrip } from '../components/ScrollAttentionStrip';
 import { FullPageAnalysisResult } from '../utils/fullPageAnalysis';
 import { StoredRecentImage } from '../utils/recentImages';
-import { SAMPLES, SampleType } from '../utils/samples';
+import { SampleType } from '../utils/samples';
 import { pngDataUrl } from '../api';
 import { saveFile } from '../utils/saveFile';
-import { buildAnalyzeSummary } from '../utils/analyzeSummary';
+import { buildAnalyzeSummary, getPositionLabel } from '../utils/analyzeSummary';
 import { HeatmapImage } from '../components/HeatmapImage';
 import { ColorRampType } from '../utils/colorRamps';
 
@@ -362,32 +362,6 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             <span>New image</span>
           </button>
 
-          <div className="h-5 w-px bg-neutral-800 shrink-0" />
-
-          {/* Samples horizontal scroll row */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider shrink-0">
-              Samples:
-            </span>
-            {SAMPLES.map((sample) => (
-              <button
-                key={sample.id}
-                type="button"
-                onClick={() => onSelectSample(sample.id)}
-                className="flex items-center gap-1.5 shrink-0 rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 hover:border-teal-600 hover:bg-neutral-900 transition-colors min-h-[44px]"
-              >
-                <img
-                  src={sample.thumbnail}
-                  alt=""
-                  aria-hidden="true"
-                  className="h-6 w-6 rounded border border-neutral-700/60 object-cover shrink-0"
-                />
-                <span className="text-xs font-medium text-neutral-300 whitespace-nowrap">
-                  {sample.name}
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
         {/* Dismissible Hint Bar above Canvas (Desktop >= 1024px) */}
         {showHintBar && (
@@ -418,7 +392,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               <button
                 type="button"
                 onClick={onOpenClientGuide}
-                className="rounded bg-teal-600 hover:bg-teal-500 text-white px-2.5 py-1 text-xs font-medium transition-colors"
+                className="rounded bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-1 text-xs font-medium transition-colors"
               >
                 See the 1-minute guide
               </button>
@@ -657,11 +631,11 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               onClick={handleExportPdf}
               disabled={!result}
               title="Download PDF attention report"
-              aria-label="Download PDF report"
-              className="flex h-7 items-center gap-1 rounded bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 text-xs font-medium transition-colors"
+              aria-label="Download report"
+              className="flex h-7 items-center gap-1 rounded bg-teal-700 hover:bg-teal-800 text-white px-2 py-1 text-xs font-medium transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
-              <span>Report</span>
+              <span>Download report</span>
             </button>
             <button
               type="button"
@@ -726,7 +700,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Add an image"
+                aria-label="Choose image"
                 onClick={() => hiddenFileInputRef.current?.click()}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -740,8 +714,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 className={`flex min-h-64 w-full self-stretch flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${isDragging ? 'border-teal-400 bg-teal-950/40' : 'border-neutral-700/80 bg-neutral-900/60'}`}
               >
                 <Upload className="h-8 w-8 text-teal-400 mb-3" aria-hidden="true" />
-                <p className="text-sm font-semibold text-neutral-100">Drop image here or click to choose</p>
-                <p className="mt-1 text-xs text-neutral-400">or paste (Ctrl+V)</p>
+                <p className="text-sm font-semibold text-neutral-100">Choose image</p>
+                <p className="mt-1 text-xs text-neutral-400">Drop image here or paste (Ctrl+V)</p>
               </div>
             ) : (
             /* Pin removal to the image at 100% and the canvas while zoomed. */
@@ -917,10 +891,10 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                     >
                       <div
                         style={{ backgroundColor: aoi.color || '#14b8a6' }}
-                        className="absolute -top-5 left-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white shadow"
+                        className="absolute -top-5 left-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-neutral-950 shadow"
                       >
                         <span>{aoi.name}</span>
-                        <span className="font-mono bg-black/40 px-1 rounded">{share.toFixed(1)}%</span>
+                        <span className="font-mono bg-white/20 px-1 rounded">{share.toFixed(1)}%</span>
                       </div>
                     </div>
                   );
@@ -985,18 +959,11 @@ export const Analyze: React.FC<AnalyzeProps> = ({
             </div>
             <p className="text-xs text-neutral-200 leading-relaxed">{buildAnalyzeSummary(result, aois)}</p>
             <div className="pt-2 border-t border-teal-800/40 flex flex-wrap gap-1.5 text-xs">
-              <button
-                type="button"
-                onClick={() => onRemoveImage?.()}
-                className="rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2 py-1 font-medium transition-colors"
-              >
-                Try another image
-              </button>
               {onNavigate && (
                 <button
                   type="button"
                   onClick={() => onNavigate('compare')}
-                  className="rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2 py-1 font-medium transition-colors"
+                  className="rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2 py-1 max-lg:py-3.5 font-medium transition-colors"
                 >
                   Compare two designs
                 </button>
@@ -1005,7 +972,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('learn')}
-                  className="rounded bg-neutral-800 hover:bg-neutral-700 text-teal-300 px-2 py-1 font-medium transition-colors"
+                  className="rounded bg-neutral-800 hover:bg-neutral-700 text-teal-300 px-2 py-1 max-lg:py-3.5 font-medium transition-colors"
                 >
                   How Glance judges a design
                 </button>
@@ -1013,7 +980,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
               <button
                 type="button"
                 onClick={handleExportPdf}
-                className="rounded bg-teal-600 hover:bg-teal-500 text-white px-2 py-1 font-medium transition-colors ml-auto"
+                className="rounded bg-teal-700 hover:bg-teal-800 text-white px-2 py-1 max-lg:py-3.5 font-medium transition-colors ml-auto"
               >
                 Download report
               </button>
@@ -1119,6 +1086,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                         />
                         <input
                           type="text"
+                          aria-label="Area name"
                           value={aoi.name}
                           onChange={(e) => handleRenameAoi(aoi.id, e.target.value)}
                           className="bg-transparent text-xs text-neutral-200 focus:outline-none focus:border-b border-teal-500 w-full"
@@ -1127,7 +1095,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteAoi(aoi.id)}
-                        className="text-neutral-400 hover:text-red-400 p-0.5 rounded"
+                        aria-label={`Delete area ${aoi.name}`}
+                        className="text-neutral-400 hover:text-red-400 p-4 rounded"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -1141,7 +1110,7 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                     <div className="flex items-center justify-between text-[10px] text-neutral-400">
                       <span>First Glance:</span>
                       <span className="font-mono text-teal-400">
-                        {fix ? `Fixation #${fix.order}` : 'After 7th'}
+                        {fix ? `Look ${fix.order}` : 'After 7th'}
                       </span>
                     </div>
                   </div>
@@ -1175,8 +1144,8 @@ export const Analyze: React.FC<AnalyzeProps> = ({
                 key={p.order}
                 className="rounded bg-neutral-950 p-1.5 text-center border border-neutral-800"
               >
-                <div className="font-bold text-teal-400">#{p.order}</div>
-                <div className="text-neutral-400 text-[9px]">{p.x.toFixed(0)}%,{p.y.toFixed(0)}%</div>
+                <div className="font-bold text-teal-400">Look {p.order}</div>
+                <div className="text-neutral-400 text-[9px]">{getPositionLabel(p)}</div>
               </div>
             ))}
           </div>
@@ -1213,13 +1182,6 @@ export const Analyze: React.FC<AnalyzeProps> = ({
           </div>
         </details>
 
-        {/* 5. Trust Badges in Results */}
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
-          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block">
-            Research &amp; Integrity
-          </span>
-          <TrustBadges compact />
-        </div>
         </>}
       </div>
     </div>

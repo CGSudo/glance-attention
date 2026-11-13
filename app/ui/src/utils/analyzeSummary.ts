@@ -1,5 +1,20 @@
 import type { Aoi, AnalyzeResult } from '../api/types';
 
+export function getPositionLabel(point: { x: number; y: number }): string {
+  if (point.y < 35) {
+    if (point.x < 35) return 'top left';
+    if (point.x > 65) return 'top right';
+    return 'top center';
+  }
+  if (point.y <= 65) {
+    if (point.x < 35) return 'left side';
+    if (point.x > 65) return 'right side';
+    return 'center';
+  }
+  if (point.x < 50) return 'bottom left';
+  return 'bottom right';
+}
+
 function getTopLookedAtAreas(res: AnalyzeResult, markedAois: Aoi[]): string[] {
   return res.scanpath.slice(0, 3).map((point) => {
     const matching = markedAois.find(
@@ -10,18 +25,7 @@ function getTopLookedAtAreas(res: AnalyzeResult, markedAois: Aoi[]): string[] {
         point.y <= a.y + a.height
     );
     if (matching) return `"${matching.name}"`;
-    if (point.y < 35) {
-      if (point.x < 35) return 'the top left';
-      if (point.x > 65) return 'the top right';
-      return 'the top center';
-    }
-    if (point.y <= 65) {
-      if (point.x < 35) return 'the left side';
-      if (point.x > 65) return 'the right side';
-      return 'the center';
-    }
-    if (point.x < 50) return 'the bottom left';
-    return 'the bottom right';
+    return `the ${getPositionLabel(point)}`;
   });
 }
 

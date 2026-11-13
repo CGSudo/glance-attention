@@ -27,8 +27,8 @@ test('Analyze provides compact uploader bar and proper ordering below 1024px', (
   const analyzeSource = fs.readFileSync(path.join(srcDir, 'screens/Analyze.tsx'), 'utf-8');
   assert.ok(analyzeSource.includes('Mobile Compact Uploader Bar'), 'Should have mobile compact uploader bar');
   assert.ok(analyzeSource.includes('order-last lg:order-none w-full lg:w-80'), 'Recents and samples follow results below 1024px');
-  assert.ok(analyzeSource.includes('SAMPLES.map'), 'Compact uploader bar should map samples');
-  assert.ok(analyzeSource.includes('overflow-x-auto'), 'Samples should be a horizontal scroll row');
+  assert.equal(analyzeSource.includes('SAMPLES.map'), false, 'Samples appear only in the lower library grid');
+  assert.equal((analyzeSource.match(/<TrustBadges/g) || []).length, 1, 'One trust block in the library panel');
   const toolbarSource = analyzeSource.split('Canvas Toolbar (Desktop >= 1024px)')[1].split('Viewport canvas container')[0];
   assert.ok(toolbarSource.includes('hidden lg:flex items-center justify-between'), 'Canvas toolbar hidden below 1024px');
   assert.equal(toolbarSource.includes('flex-wrap'), false, 'Desktop toolbar stays on one row');

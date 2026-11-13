@@ -57,7 +57,7 @@ export const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
         <button
           type="button"
           aria-label="Switch active attention prediction model"
-          className={`flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-800/80 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-colors shrink-0 ${className}`}
+          className={`flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-800/80 px-2.5 py-1.5 max-lg:py-3 text-xs font-medium text-neutral-200 hover:bg-neutral-700/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-colors shrink-0 ${className}`}
         >
           <Cpu className="h-3.5 w-3.5 text-teal-400 shrink-0" />
           <span className="font-semibold truncate">{activeModel?.name ?? 'UNISAL'}</span>

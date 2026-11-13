@@ -5,6 +5,7 @@ import { DesignUploader } from '../components/DesignUploader';
 import { TrustBadges } from '../components/TrustBadges';
 import { StoredRecentImage } from '../utils/recentImages';
 import { SampleType } from '../utils/samples';
+import { isWeb } from '../api';
 
 interface HomeProps {
   onSelectImage: (file: File) => void;
@@ -37,8 +38,8 @@ export const Home: React.FC<HomeProps> = ({
           Where do people look in the first 3 seconds?
         </h1>
         <p className="text-sm text-neutral-400 max-w-2xl leading-relaxed">
-          Glance estimates early visual fixations offline using deep saliency models.
-          Every score shows its exact mathematical formula and benchmark backing.
+          Add a screenshot or try a sample to see what may catch attention first.
+          Images stay on your device. Scores explain how they work and link to research.
         </p>
       </div>
 
@@ -83,14 +84,14 @@ export const Home: React.FC<HomeProps> = ({
 
         <button
           type="button"
-          onClick={() => onNavigate('video')}
+          onClick={() => isWeb ? window.location.assign('https://cgsudo.github.io/glance-attention/download.html') : onNavigate('video')}
           className="flex items-center justify-between p-3 rounded-lg border border-neutral-800/80 bg-neutral-900/30 hover:bg-neutral-900 hover:border-neutral-700 text-left transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <Video className="h-4 w-4 text-teal-400" />
             <div>
-              <div className="text-xs font-medium text-neutral-200">Video Attention</div>
-              <div className="text-[11px] text-neutral-400">Frame-by-frame 5fps sequence</div>
+              <div className="text-xs font-medium text-neutral-200">Video Attention{isWeb && <span className="ml-2 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300">Desktop app</span>}</div>
+              <div className="text-[11px] text-neutral-400">{isWeb ? 'Analyze video in the desktop app' : 'Frame-by-frame 5fps sequence'}</div>
             </div>
           </div>
           <ArrowRight className="h-3.5 w-3.5 text-neutral-400" />
@@ -98,14 +99,14 @@ export const Home: React.FC<HomeProps> = ({
 
         <button
           type="button"
-          onClick={() => onNavigate('batch')}
+          onClick={() => isWeb ? window.location.assign('https://cgsudo.github.io/glance-attention/download.html') : onNavigate('batch')}
           className="flex items-center justify-between p-3 rounded-lg border border-neutral-800/80 bg-neutral-900/30 hover:bg-neutral-900 hover:border-neutral-700 text-left transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <Layers className="h-4 w-4 text-teal-400" />
             <div>
-              <div className="text-xs font-medium text-neutral-200">Batch Processing</div>
-              <div className="text-[11px] text-neutral-400">Folder to CSV/PDF export</div>
+              <div className="text-xs font-medium text-neutral-200">Batch Processing{isWeb && <span className="ml-2 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300">Desktop app</span>}</div>
+              <div className="text-[11px] text-neutral-400">{isWeb ? 'Process a folder in the desktop app' : 'Folder to CSV/PDF export'}</div>
             </div>
           </div>
           <ArrowRight className="h-3.5 w-3.5 text-neutral-400" />

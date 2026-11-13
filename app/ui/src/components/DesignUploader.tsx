@@ -154,7 +154,7 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: Browse + Paste */}
+        {/* Action Buttons: Choose image + Paste */}
         <div className="mt-3 flex items-center gap-2">
           <button
             type="button"
@@ -162,10 +162,10 @@ export const DesignUploader: React.FC<DesignUploaderProps> = ({
               e.stopPropagation();
               fileInputRef.current?.click();
             }}
-            className="inline-flex items-center gap-1.5 rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-teal-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-teal-700 px-3 py-1.5 max-lg:py-3.5 text-xs font-semibold text-white shadow hover:bg-teal-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 transition-colors"
           >
             <Upload className="h-3.5 w-3.5" />
-            <span>Browse</span>
+            <span>Choose image</span>
           </button>
 
           <button

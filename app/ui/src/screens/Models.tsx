@@ -49,20 +49,6 @@ export const Models: React.FC<ModelsProps> = ({
       </div>
 
       {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
-      {isWeb && <a className="inline-block rounded bg-teal-600 px-4 py-3 text-sm text-white" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a>}
-
-      {/* Licensing & Honesty Banner */}
-      <div className="rounded-lg bg-neutral-900/60 border border-neutral-800 p-4 text-xs text-neutral-300 flex items-start gap-3">
-        <ShieldCheck className="h-5 w-5 text-teal-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="font-semibold text-neutral-100">Redistribution & License Policy</span>
-          <p className="text-neutral-400 leading-relaxed">
-            Glance only bundles and downloads assets under permissive open-source licenses (MIT, Apache-2.0).
-            Academic models without redistribution rights (e.g. EyeFormer, DeepGaze IIE) require bringing your own
-            exported ONNX checkpoint.
-          </p>
-        </div>
-      </div>
 
       {/* Models Grid with Accuracy Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -132,6 +118,21 @@ export const Models: React.FC<ModelsProps> = ({
             </div>
           </div>
         ))}
+      </div>
+
+      {isWeb && <a className="inline-block rounded bg-teal-700 px-4 py-3 text-sm text-white" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a>}
+
+      {/* Licensing & Honesty Banner */}
+      <div className="rounded-lg bg-neutral-900/60 border border-neutral-800 p-4 text-xs text-neutral-300 flex items-start gap-3">
+        <ShieldCheck className="h-5 w-5 text-teal-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-semibold text-neutral-100">Redistribution & License Policy</span>
+          <p className="text-neutral-400 leading-relaxed">
+            Glance only bundles and downloads assets under permissive open-source licenses (MIT, Apache-2.0).
+            Academic models without redistribution rights (e.g. EyeFormer, DeepGaze IIE) require bringing your own
+            exported ONNX checkpoint.
+          </p>
+        </div>
       </div>
 
       {/* Human Benchmark Reference Info Box */}

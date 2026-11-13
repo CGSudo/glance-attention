@@ -110,7 +110,7 @@ export const ClientGuideModal: React.FC<ClientGuideModalProps> = ({ open, onOpen
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex items-center gap-1 rounded bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[44px]"
+              className="inline-flex items-center gap-1 rounded bg-teal-700 hover:bg-teal-800 text-white px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[44px]"
             >
               <span>{stepIndex === STEPS.length - 1 ? 'Finish' : 'Next'}</span>
               {stepIndex === STEPS.length - 1 ? <Check className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
