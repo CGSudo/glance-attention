@@ -93,6 +93,8 @@ export const Layout: React.FC<LayoutProps> = ({
             models={models}
             activeModelId={activeModelId}
             onSelectModel={onSelectModel}
+            contentType={contentType}
+            onChangeContentType={onChangeContentType}
           />
           {!!(activeModel?.conditions?.length || activeModel?.condition) && (
             <select aria-label="Content type" value={contentType} onChange={event => onChangeContentType(event.target.value as ContentType)} className="hidden sm:inline-block rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs">

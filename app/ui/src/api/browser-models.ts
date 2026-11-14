@@ -20,7 +20,7 @@ export async function storedModel(model: BrowserModel, bytes?: Uint8Array): Prom
   });
 }
 
-export async function modelBytes(model: BrowserModel, base: string, extension: boolean, progress: (bytes: number) => void): Promise<Uint8Array> {
+export async function modelBytes(model: BrowserModel, base: string, extension: boolean, progress: (bytes: number) => void, allowDownload = true, signal?: AbortSignal): Promise<Uint8Array> {
   const url = new URL(`models/${model.id}.onnx`, base).href;
   const cache = !extension && 'caches' in globalThis ? await caches.open('glance-models-v1').catch(() => undefined) : undefined;
   const cacheKey = `${url}?sha256=${model.sha256}`;
@@ -30,13 +30,20 @@ export async function modelBytes(model: BrowserModel, base: string, extension: b
     try { await verifyModel(cached, model); progress(cached.length); return cached; }
     catch { await cache?.delete(cacheKey); }
   }
+  signal?.throwIfAborted();
+  if (!allowDownload) throw new Error(`Download ${model.name} once from Models before analyzing.`);
+  if (!extension && !cache && model.id !== 'unisal') throw new Error('Browser storage is full or unavailable. Free space, then retry.');
   const urls = extension && model.id !== 'unisal'
     ? [model.url, `https://cgsudo.github.io/glance-attention/app/models/${model.id}.onnx`] : [url];
-  const bytes = await downloadModel(urls, model, progress);
+  const bytes = await downloadModel(urls, model, progress, signal);
+  signal?.throwIfAborted();
   if (extension && model.id !== 'unisal') {
     try { await storedModel(model, bytes); }
     catch { throw new Error('Model verified, but browser storage is full or unavailable. Free space, then retry.'); }
   }
-  else await cache?.put(cacheKey, new Response(new Uint8Array(bytes).buffer)).catch(() => undefined);
+  else {
+    try { await cache?.put(cacheKey, new Response(new Uint8Array(bytes).buffer)); }
+    catch { if (model.id !== 'unisal') throw new Error('Browser storage is full or unavailable. Free space, then retry.'); }
+  }
   return bytes;
 }

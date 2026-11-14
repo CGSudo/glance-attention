@@ -3,6 +3,7 @@ import { Aoi, AnalyzeResult, CompareResult, Config, ContentType, InstallProgress
 export interface Transport {
   getModels(): Promise<ModelInfo[]>;
   installModel(id: string, onProgress?: (progress: InstallProgress) => void): Promise<{ ok: boolean }>;
+  cancelInstall?(id: string): void;
   importModel?(): Promise<{ ok: boolean } | null>;
   getSystemInfo(): Promise<SystemInfo>;
   getConfig(): Promise<Config>;

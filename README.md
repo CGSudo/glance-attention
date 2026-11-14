@@ -11,6 +11,8 @@
 
 Looking for a free, open-source alternative to Attention Insight, Neurons Predict, Brainsight or Feng-GUI? [See the comparisons](https://cgsudo.github.io/glance-attention/compare/).
 
+Try UNISAL, SUM or TranSalNet locally in your browser. SUM and TranSalNet require an explicit one-time model download stored in this browser. [Open Glance](https://cgsudo.github.io/glance-attention/app/).
+
 <p align="center">
   <a href="https://github.com/CGSudo/glance-attention/releases"><img src="https://img.shields.io/github/v/release/CGSudo/glance-attention?color=0F766E&label=release" alt="Release"></a>
   <a href="https://github.com/CGSudo/glance-attention/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/CGSudo/glance-attention/ci.yml?branch=main&label=CI&color=0F766E" alt="CI Status"></a>

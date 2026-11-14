@@ -310,7 +310,7 @@ export const App: React.FC = () => {
       const updated = await transport.getModels();
       setModels(updated);
     } catch (err) {
-      setModelError(String(err));
+      setModelError(err instanceof Error ? err.message : String(err));
     } finally {
       setInstalling(previous => {
         const next = { ...previous };
@@ -414,7 +414,7 @@ export const App: React.FC = () => {
       {currentScreen === 'compare' && <Compare activeModelId={activeModelId} contentType={contentType} colorRamp={colorRamp} />}
 
       {currentScreen === 'video' && !isWeb && <Video />}
-      {isWeb && (currentScreen === 'video' || currentScreen === 'batch') && <p className="p-6"><a className="text-teal-300 underline" href="https://cgsudo.github.io/glance-attention/download.html">Get the desktop app for SUM, TranSalNet, video, batch</a></p>}
+        {isWeb && (currentScreen === 'video' || currentScreen === 'batch') && <p className="p-6"><a className="text-teal-300 underline" href="https://cgsudo.github.io/glance-attention/download.html">Get the faster desktop app with video and batch</a></p>}
 
       {currentScreen === 'models' && (
         <Models
@@ -422,6 +422,7 @@ export const App: React.FC = () => {
           activeModelId={activeModelId}
           onSelectModel={handleSelectModel}
           onInstallModel={handleInstallModel}
+          onCancelInstall={getTransport().cancelInstall ? id => getTransport().cancelInstall?.(id) : undefined}
           onImportModel={getTransport().importModel ? handleImportModel : undefined}
           installing={installing}
           error={modelError}

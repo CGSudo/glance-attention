@@ -1,16 +1,20 @@
 import React from 'react';
 import { InstallProgress, ModelInfo } from '../api/types';
+import { isWeb } from '../api';
 
 interface AccuracyCardProps {
   model: ModelInfo;
   isActive?: boolean;
   onSelect?: () => void;
   onInstall?: () => void;
+  onCancelInstall?: () => void;
   installProgress?: InstallProgress;
 }
 
 const HUMAN_CEILING_AUC = 0.934;
 const HUMAN_CEILING_CC = 0.983;
+// Forced-WASM baseline on Core Ultra 5 laptop, recorded in WEB_MODELS.md.
+const BROWSER_IMAGE_SECONDS: Record<string, number> = { sum: 18, transalnet: 7 };
 
 const MODEL_STRENGTHS: Record<string, string> = {
   unisal: 'Fast and light. Good first check for any image.',
@@ -23,11 +27,16 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
   isActive,
   onSelect,
   onInstall,
+  onCancelInstall,
   installProgress,
 }) => {
   const auc = model.benchmark?.AUC ?? null;
   const cc = model.benchmark?.CC ?? null;
   const strength = MODEL_STRENGTHS[model.id];
+  const largeBrowserModel = isWeb && model.id !== 'unisal';
+  const sizeMb = model.size_bytes === undefined ? undefined : Math.ceil(model.size_bytes / 1_000_000);
+  const device = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+  const showWarning = largeBrowserModel && (/Mobi|Android/i.test(device.userAgent) || (device.deviceMemory ?? Infinity) <= 4 || device.connection?.saveData);
 
   return (
     <div
@@ -87,7 +96,7 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
               disabled={!!installProgress}
               className="rounded bg-teal-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
             >
-              {installProgress ? 'Installing…' : 'Install'}
+              {installProgress ? 'Downloading…' : largeBrowserModel ? `Download once (${sizeMb} MB)` : 'Install'}
             </button>
           )
         )}
@@ -96,7 +105,12 @@ export const AccuracyCard: React.FC<AccuracyCardProps> = ({
       {installProgress && <div role="status" className="mb-3 text-xs text-teal-300">
         <span>{installProgress.total ? `${Math.min(100, Math.floor(installProgress.downloaded * 100 / installProgress.total))}% downloaded · Verifying before install` : 'Downloading and verifying model…'}</span>
         <progress aria-label={`${model.name} download`} value={installProgress.total ? installProgress.downloaded : undefined} max={installProgress.total || 1} className="mt-1 block w-full accent-teal-500" />
+        {onCancelInstall && <button type="button" onClick={onCancelInstall} className="mt-2 underline">Cancel download</button>}
       </div>}
+
+      {largeBrowserModel && <p className="mb-3 text-xs text-neutral-400">{sizeMb} MB · {model.installed ? 'Stored in this browser.' : 'Download once, stored in this browser. Then choose Use.'}</p>}
+      {largeBrowserModel && BROWSER_IMAGE_SECONDS[model.id] && <p className="mb-3 text-xs text-neutral-400">About {BROWSER_IMAGE_SECONDS[model.id]} s per image on the tested Core Ultra 5 laptop (WASM).</p>}
+      {showWarning && !model.installed && <p className="mb-3 text-xs text-amber-300">Large model. Best on a computer.</p>}
 
       <div className="space-y-3 pt-2 border-t border-neutral-800">
         <div>

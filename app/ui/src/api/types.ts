@@ -21,6 +21,7 @@ export interface ModelInfo {
   license: string;
   installed: boolean;
   size_mb?: number;
+  size_bytes?: number;
   citation?: string;
   source?: string;
   benchmark?: BenchmarkScores;

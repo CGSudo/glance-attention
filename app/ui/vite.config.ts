@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   plugins: [react(), {
     name: 'web-metadata',
     transformIndexHtml: html => !web ? html : html.replace(/<title>.*?<\/title>/, `<title>Free AI attention heatmap — try in your browser | Glance</title>
-    <meta name="description" content="Create free AI attention heatmaps in your browser with UNISAL. Compare designs, inspect gaze order, and try the squint test. Images stay on your device.">
+    <meta name="description" content="Create free AI attention heatmaps in your browser with UNISAL, SUM or TranSalNet. Compare designs, inspect gaze order, and try the squint test. Images stay on your device.">
     <link rel="canonical" href="https://cgsudo.github.io/glance-attention/app/">
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Glance","url":"https://cgsudo.github.io/glance-attention/app/","applicationCategory":"DesignApplication","operatingSystem":"Web browser","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>`),
   }],

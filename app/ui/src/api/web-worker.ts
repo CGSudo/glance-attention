@@ -24,12 +24,13 @@ let activeModel = '';
 let provider = 'wasm';
 let ready: Promise<unknown> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
+const downloads = new Map<number, AbortController>();
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = false;
 ort.env.logLevel = 'error';
 
-async function handle(request: BrowserRequest) {
-  const model = browserModels.find(model => model.id === request.modelId && (request.extension || model.id === 'unisal'));
+async function handle(request: BrowserRequest, signal?: AbortSignal) {
+  const model = browserModels.find(model => model.id === request.modelId);
   if (!model) throw new Error('Choose an available image model');
   const status = (text: string, downloaded?: number) => scope.postMessage({ id: request.id, status: text, downloaded, total: model.size_bytes });
   ort.env.wasm.wasmPaths = {
@@ -38,7 +39,8 @@ async function handle(request: BrowserRequest) {
   };
   if (activeModel !== model.id || !session || request.kind === 'install') {
     const bytes = await modelBytes(model, request.base, request.extension, downloaded =>
-      status(`1/3: Loading ${model.name} — ${Math.round(downloaded / model.size_bytes * 100)}%`, downloaded));
+      status(`1/3: Loading ${model.name} — ${Math.round(downloaded / model.size_bytes * 100)}%`, downloaded),
+    request.kind === 'install' || request.extension || model.id === 'unisal', signal);
     if (request.kind === 'install') return { ok: true };
     await session?.release();
     session = undefined;
@@ -90,9 +92,21 @@ async function handle(request: BrowserRequest) {
   }
 }
 
-scope.onmessage = ({ data }: MessageEvent<BrowserRequest>) => {
+scope.onmessage = ({ data }: MessageEvent<BrowserRequest | { id: number; kind: 'cancel' }>) => {
+  if (data.kind === 'cancel') { downloads.get(data.id)?.abort(); return; }
+  const controller = data.kind === 'install' ? new AbortController() : undefined;
+  if (controller) downloads.set(data.id, controller);
   queue = queue.then(async () => {
-    try { scope.postMessage({ id: data.id, result: await handle(data), provider }); }
-    catch (error) { scope.postMessage({ id: data.id, error: String(error) }); }
+    try { scope.postMessage({ id: data.id, result: await handle(data, controller?.signal), provider }); }
+    catch (error) {
+      let message = error instanceof Error ? error.message : String(error);
+      if (!data.extension) {
+        if (controller?.signal.aborted) message = 'Download canceled. Retry to start again.';
+        else if (/memory|alloc|out of bounds/i.test(message)) message = 'The tab ran out of memory.';
+        else if (/fetch|network|download failed|incomplete download|abort/i.test(message)) message = 'Download interrupted. Retry to start again.';
+        message += ' Use UNISAL or the desktop app.';
+      }
+      scope.postMessage({ id: data.id, error: message });
+    } finally { downloads.delete(data.id); }
   });
 };

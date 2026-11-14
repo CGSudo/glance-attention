@@ -26,3 +26,22 @@ test('download verifies SHA-256, caps bytes, reports progress, and falls back on
     await assert.rejects(downloadModel(['release', 'mirror'], model, () => {}), /not published yet/);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('cancel stops a download before fetch or during streaming', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    const before = new AbortController();
+    before.abort();
+    globalThis.fetch = () => { assert.fail('Canceled download must not fetch'); };
+    await assert.rejects(downloadModel(['mirror'], model, () => {}, before.signal), { name: 'AbortError' });
+    const during = new AbortController();
+    let canceled = false;
+    globalThis.fetch = async () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(bytes.subarray(0, 1)); },
+      pull(controller) { controller.enqueue(bytes.subarray(1)); },
+      cancel() { canceled = true; },
+    }));
+    await assert.rejects(downloadModel(['mirror'], model, () => during.abort(), during.signal), { name: 'AbortError' });
+    assert.equal(canceled, true);
+  } finally { globalThis.fetch = originalFetch; }
+});

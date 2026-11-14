@@ -1,5 +1,5 @@
 # Glance
-> Free, open-source desktop attention prediction, in development. Planned local ONNX inference for Windows and macOS.
+> Free, open-source attention prediction in the browser and desktop app. Browser image models include UNISAL, SUM and TranSalNet, with explicit one-time downloads for SUM and TranSalNet stored in the browser.
 
 Glance estimates early free-viewing attention from images. It does not record eyes or establish comprehension, memory, emotion or conversion. No Glance accuracy benchmark is established. Model licenses differ from application licensing.
 

@@ -9,15 +9,19 @@ export async function verifyModel(bytes: Uint8Array, model: DownloadModel): Prom
   if (hash !== model.sha256) throw new Error(`${model.id}: SHA-256 mismatch; model rejected`);
 }
 
-export async function downloadModel(urls: string[], model: DownloadModel, progress: (downloaded: number) => void): Promise<Uint8Array> {
+export async function downloadModel(urls: string[], model: DownloadModel, progress: (downloaded: number) => void, signal?: AbortSignal): Promise<Uint8Array> {
   let response: Response | undefined;
   let missing = false;
   for (const url of urls) {
     try {
-      const candidate = await fetch(url, { signal: AbortSignal.timeout(600_000) });
+      signal?.throwIfAborted();
+      const candidate = await fetch(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000) });
       if (candidate.status === 404) missing = true;
       if (candidate.ok) { response = candidate; break; }
-    } catch { /* GitHub Releases may reject CORS; try the Pages mirror. */ }
+    } catch {
+      signal?.throwIfAborted();
+      // GitHub Releases may reject CORS; try the Pages mirror.
+    }
   }
   if (!response?.body) throw new Error(missing
     ? `${model.id}: model not published yet. Try the desktop app or retry after publication.`
@@ -28,6 +32,7 @@ export async function downloadModel(urls: string[], model: DownloadModel, progre
   try {
     for (;;) {
       const { done, value } = await reader.read();
+      signal?.throwIfAborted();
       if (done) break;
       if (offset + value.length > bytes.length) throw new Error(`${model.id}: download exceeds registry size`);
       bytes.set(value, offset);
